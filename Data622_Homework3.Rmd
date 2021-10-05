@@ -1,1 +1,126 @@
+---
+title: "Data622 - Group2 - Homework3"
+author: "Zachary Palmore, Kevin Potter, Amit Kapoor"
+date: "10/2/2021"
+output:
+  html_document:
+    fig_width: 15
+    highlight: pygments
+    number_sections: no
+    theme: flatly
+    toc: yes
+    toc_float: yes
+  pdf_document:
+    latex_engine: xelatex
+    toc: yes
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, error=FALSE, warning=FALSE, message=FALSE, fig.align="center", fig.width = 10)
+```
+
+
+# Overview
+In this project, the dataset used, is for Loan approval where the prediction will be done for Loan approval status using Linear Discriminant Analysis (LDA), K-nearest neighbor (KNN), Decision Trees and Random Forest models.
+
+# R packages
+We will use `r` for data modeling. All packages used for data exploration, visualization, preparation and modeling are listed in Code Appendix.
+
+```{r libraries, include=FALSE, warning=FALSE, message=FALSE}
+# Libraries
+
+library(summarytools)
+library(tidyverse)
+
+set.seed(622)
+```
+
+# Data Exploration
+Below is the description of the variables of interest in the data set.
+
+|VARIABLE NAME|DESCRIPTION|
+|--|----|
+|Loan_ID|Unique Loan ID|
+|Gender|Male/ Female|
+|Married|Applicant married (Y/N)|
+|Dependents|Number of dependents|
+|Education|Applicant Education (Graduate/ Undergraduate)|
+|Self_Employed|Self employed (Y/N)|
+|ApplicantIncome|Applicant income|
+|CoapplicantIncome|Coapplicant income|
+|LoanAmount|Loan amount in thousands|
+|Loan_Amount_Term|Term of loan in months|
+|Credit_History|credit history meets guidelines|
+|Property_Area|Urban/ Semi Urban/ Rural|
+|Loan_Status|Loan approved (Y/N)|
+
+
+```{r data}
+# read data and remove loan_id
+loan_data <- read.csv('https://raw.githubusercontent.com/amit-kapoor/Data622Group2/main/Loan_approval.csv') %>%
+  select(-1)
+```
+
+
+## Data summary
+
+Below is summary of loan approval dataset.
+
+```{r loan_data_summary}
+dfSummary(loan_data, style = 'grid', graph.col = FALSE)
+```
+
+
+
+
+# Data Preparation
+
+## Handling missing values
+
+## Training and Test Partition
+
+
+# Build Models
+
+## Linear Discriminant Analysis (LDA)
+
+
+## K-nearest neighbor (KNN)
+
+## Decision Trees
+
+## Random Forests
+
+
+
+# Model performance
+
+
+
+# Conclusion
+
+# References
+
+# Code Appendix
+
+```{r ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
