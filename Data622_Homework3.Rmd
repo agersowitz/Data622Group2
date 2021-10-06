@@ -57,9 +57,21 @@ Below is the description of the variables of interest in the data set.
 
 
 ```{r data}
-# read data and remove loan_id
-loan_data <- read.csv('https://raw.githubusercontent.com/amit-kapoor/Data622Group2/main/Loan_approval.csv') %>%
+# read data, change blank to NA and and remove loan_id
+loan_data <- read.csv('https://raw.githubusercontent.com/amit-kapoor/Data622Group2/main/Loan_approval.csv') %>% 
+  na_if("") %>%
   select(-1)
+
+# categorical columns as factors
+loan_data <- loan_data %>% 
+  mutate(Gender=as.factor(Gender),
+         Married=as.factor(Married),
+         Dependents=as.factor(Dependents),
+         Education=as.factor(Education),
+         Self_Employed=as.factor(Self_Employed),
+         Property_Area=as.factor(Property_Area),
+         Loan_Status=as.factor(Loan_Status))
+
 ```
 
 
@@ -71,7 +83,8 @@ Below is summary of loan approval dataset.
 dfSummary(loan_data, style = 'grid', graph.col = FALSE)
 ```
 
-
+* There are 7 columns having missing values.
+* The proportion of values for few columns shows significant differences i.e. Gender (more males), Married( more married), Credit_History (more having credit history).
 
 
 # Data Preparation
