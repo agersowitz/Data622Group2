@@ -32,6 +32,11 @@ We will use `r` for data modeling. All packages used for data exploration, visua
 
 library(summarytools)
 library(tidyverse)
+library(DataExplorer)
+library(reshape2)
+library(mice)
+library(caret)
+library(MASS)
 
 set.seed(622)
 ```
@@ -60,7 +65,7 @@ Below is the description of the variables of interest in the data set.
 # read data, change blank to NA and and remove loan_id
 loan_data <- read.csv('https://raw.githubusercontent.com/amit-kapoor/Data622Group2/main/Loan_approval.csv') %>% 
   na_if("") %>%
-  select(-1)
+  dplyr::select(-1)
 
 # categorical columns as factors
 loan_data <- loan_data %>% 
@@ -70,6 +75,7 @@ loan_data <- loan_data %>%
          Education=as.factor(Education),
          Self_Employed=as.factor(Self_Employed),
          Property_Area=as.factor(Property_Area),
+         Credit_History=as.factor(Credit_History),
          Loan_Status=as.factor(Loan_Status))
 
 ```
@@ -87,17 +93,132 @@ dfSummary(loan_data, style = 'grid', graph.col = FALSE)
 * The proportion of values for few columns shows significant differences i.e. Gender (more males), Married( more married), Credit_History (more having credit history).
 
 
+
+Below graphs shows the distribution of all categorical variables.
+
+```{r, cat-bar, fig.length =20, fig.width=10}
+
+# select categorical columns
+cat_cols = c()
+j <- 1
+for (i in 1:ncol(loan_data)) {
+  if (class((loan_data[,i])) == 'factor') {
+      cat_cols[j]=names(loan_data[i])
+      j <- j+1
+  }
+}
+
+loan_fact <-  loan_data[cat_cols]
+# long format
+loan_factm <- melt(loan_fact, measure.vars = cat_cols, variable.name = 'metric', value.name = 'value')
+
+# plot categorical columns
+ggplot(loan_factm, aes(x = value)) + 
+  geom_bar() + 
+  scale_fill_brewer(palette = "Set1") + 
+  facet_wrap( ~ metric, nrow = 5L, scales = 'free') + coord_flip()
+```
+Below graph shows the distribution of numeric predictors.
+
+```{r plot_num}
+plot_histogram(loan_data, geom_histogram_args = list("fill" = "tomato4"))
+```
+
+
+
+
 # Data Preparation
 
 ## Handling missing values
 
+```{r}
+# plot missing values
+plot_missing(loan_data)
+```
+
+We can see above credit_history contributes to 8% of missing data alongwith self_employed that accounts for more than 5% of missing data. All records having missing categorical predictors will be removed. Next we will impute numeric values using MICE (Multivariate Imputation by Chained Equations).
+
+```{r cat-missing}
+# Filter out the data which has missing categorical predictors
+loan_data <- loan_data %>% filter(!is.na(Credit_History) &
+                                  !is.na(Self_Employed) &  
+                                  !is.na(Dependents) & 
+                                  !is.na(Gender) & 
+                                  !is.na(Married))
+```
+
+
+
+```{r num-missing}
+# impute numeric predictors using mice
+loan_data <- complete(mice(data=loan_data, method="pmm", print=FALSE))
+```
+
+
+```{r}
+dim(loan_data)
+```
+
+Finally our clean dataset contains 511 rows and 12 columns.
+
+
+## Preprocess using transformation
+
+We have seen above that numeric features are right skewed so in this step we will use caret `preprocess` method using box cox, center and scale transformation.
+
+```{r transform-train}
+set.seed(622)
+loan_data <- loan_data %>% 
+  dplyr::select(c("ApplicantIncome", "CoapplicantIncome", "LoanAmount", "Loan_Amount_Term")) %>%
+  preProcess(method = c("BoxCox","center","scale")) %>% 
+  predict(loan_data)
+```
+
+
 ## Training and Test Partition
+
+In this step for data preparation we will partition the training dataset in training and validation sets using `createDataPartition` method from `caret` package. We will reserve 75% for training and rest 25% for validation purpose.
+
+```{r partition}
+set.seed(622)
+partition <- createDataPartition(loan_data$Loan_Status, p=0.75, list = FALSE)
+
+training <- loan_data[partition,]
+testing <- loan_data[-partition,]
+
+# training/validation partition for independent variables
+#X.train <- ld.clean[partition, ] %>% dplyr::select(-Loan_Status)
+#X.test <- ld.clean[-partition, ] %>% dplyr::select(-Loan_Status)
+
+# training/validation partition for dependent variable Loan_Status
+#y.train <- ld.clean$Loan_Status[partition]
+#y.test <- ld.clean$Loan_Status[-partition]
+```
 
 
 # Build Models
 
 ## Linear Discriminant Analysis (LDA)
 
+```{r lda}
+# LDA model
+lda_model <- lda(Loan_Status~., data = loan_data)
+lda_model
+```
+
+```{r}
+# prediction from lda model
+lda_predict <- lda_model %>% 
+  predict(testing)
+```
+
+
+```{r lda-accuracy}
+# accuracy
+mean(lda_predict$class==testing$Loan_Status)
+```
+
+LDA model accuracy comes out as ~81%
 
 ## K-nearest neighbor (KNN)
 
