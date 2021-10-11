@@ -37,6 +37,8 @@ library(reshape2)
 library(mice)
 library(caret)
 library(MASS)
+library(e1071)
+library(caret)
 
 set.seed(622)
 ```
@@ -167,6 +169,7 @@ Finally our clean dataset contains 511 rows and 12 columns.
 We have seen above that numeric features are right skewed so in this step we will use caret `preprocess` method using box cox, center and scale transformation.
 
 ```{r transform-train}
+# library(e1071) - where this was used
 set.seed(622)
 loan_data <- loan_data %>% 
   dplyr::select(c("ApplicantIncome", "CoapplicantIncome", "LoanAmount", "Loan_Amount_Term")) %>%
@@ -222,14 +225,42 @@ LDA model accuracy comes out as ~81%
 
 ## K-nearest neighbor (KNN)
 
+```{r knn}
+# KNN model
+set.seed(622)
+train.knn <- training[, names(training) != "Direction"]
+prep <- preProcess(x = train.knn, method = c("center", "scale"))
+prep
+cl <- trainControl(method="repeatedcv", repeats = 5) 
+knn_model <- train(Loan_Status ~ ., data = training, 
+                method = "knn", 
+                trControl = cl, 
+                preProcess = c("center","scale"), 
+                tuneLength = 20)
+knn_model 
+```
+
+
+
+```{r}
+# prediction from knn model
+plot(knn_model)
+knn_predict <- predict(knn_model,newdata = testing)
+mean(knn_predict == testing$Loan_Status) # accuracy
+confusionMatrix(knn_predict, testing$Loan_Status)
+```
+
+
+
 ## Decision Trees
 
 ## Random Forests
 
-
-
 # Model performance
 
+```{r}
+
+```
 
 
 # Conclusion
@@ -239,6 +270,7 @@ LDA model accuracy comes out as ~81%
 # Code Appendix
 
 ```{r ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
+
 ```
 
 
