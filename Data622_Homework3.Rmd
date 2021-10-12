@@ -120,12 +120,72 @@ ggplot(loan_factm, aes(x = value)) +
   scale_fill_brewer(palette = "Set1") + 
   facet_wrap( ~ metric, nrow = 5L, scales = 'free') + coord_flip()
 ```
+
+
 Below graph shows the distribution of numeric predictors.
 
 ```{r plot_num}
 plot_histogram(loan_data, geom_histogram_args = list("fill" = "tomato4"))
 ```
 
+Next we will cover impact of categorical variables on loan approval.
+
+```{r}
+loan_ch <- with(loan_data, table(Credit_History, Loan_Status)) %>% 
+  prop.table(margin = 1) %>% as.data.frame() %>% filter(Loan_Status == 'Y')
+
+loan_ch
+```
+
+```{r}
+ggplot(loan_ch, aes(x=Credit_History, y=Freq, fill=Credit_History)) + geom_bar(stat='identity') + labs(title = 'Approved Loans by Credit History', y = "Percentage", x = "Credit History")
+```
+
+```{r}
+loan_gen <- with(loan_data, table(Gender, Loan_Status)) %>% 
+  prop.table(margin = 1) %>% as.data.frame() %>% filter(Loan_Status == 'Y')
+
+loan_gen
+```
+
+```{r}
+ggplot(loan_gen, aes(x=Gender, y=Freq, fill=Gender)) + geom_bar(stat='identity') + labs(title = 'Approved Loans by Gender', y = "Percentage", x = "Gender")
+```
+
+```{r}
+loan_ed <- with(loan_data, table(Education, Loan_Status)) %>% 
+  prop.table(margin = 1) %>% as.data.frame() %>% filter(Loan_Status == 'Y')
+
+loan_ed
+```
+
+```{r}
+ggplot(loan_ed, aes(x=Education, y=Freq, fill=Education)) + geom_bar(stat='identity') + labs(title = 'Approved Loans by Education', y = "Percentage", x = "Education")
+```
+
+
+```{r}
+loan_mar <- with(loan_data, table(Married, Loan_Status)) %>% 
+  prop.table(margin = 1) %>% as.data.frame() %>% filter(Loan_Status == 'Y')
+
+loan_mar
+```
+
+```{r}
+ggplot(loan_mar, aes(x=Married, y=Freq, fill=Married)) + geom_bar(stat='identity') + labs(title = 'Approved Loans by Married', y = "Percentage", x = "Married")
+```
+
+
+```{r}
+loan_dep <- with(loan_data, table(Dependents, Loan_Status)) %>% 
+  prop.table(margin = 1) %>% as.data.frame() %>% filter(Loan_Status == 'Y')
+
+loan_dep
+```
+
+```{r}
+ggplot(loan_dep, aes(x=Dependents, y=Freq, fill=Dependents)) + geom_bar(stat='identity') + labs(title = 'Approved Loans by Dependents', y = "Percentage", x = "Dependents")
+```
 
 
 
@@ -266,6 +326,8 @@ confusionMatrix(knn_predict, testing$Loan_Status)
 # Conclusion
 
 # References
+
+https://www.r-bloggers.com/2018/07/prop-table/
 
 # Code Appendix
 
