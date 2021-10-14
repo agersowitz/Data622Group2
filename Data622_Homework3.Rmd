@@ -1,8 +1,11 @@
 ---
 title: "Data622 - Group2 - Homework3"
-author: "Zachary Palmore, Kevin Potter, Amit Kapoor"
+author: "Zachary Palmore, Kevin Potter, Amit Kapoor, Adam Gersowitz"
 date: "10/2/2021"
 output:
+  pdf_document:
+    latex_engine: xelatex
+    toc: yes
   html_document:
     fig_width: 15
     highlight: pygments
@@ -10,9 +13,6 @@ output:
     theme: flatly
     toc: yes
     toc_float: yes
-  pdf_document:
-    latex_engine: xelatex
-    toc: yes
 ---
 
 
@@ -39,6 +39,9 @@ library(caret)
 library(MASS)
 library(e1071)
 library(caret)
+library(tree)
+library(randomForest)
+library(corrplot)
 
 set.seed(622)
 ```
@@ -90,6 +93,7 @@ Below is summary of loan approval dataset.
 ```{r loan_data_summary}
 dfSummary(loan_data, style = 'grid', graph.col = FALSE)
 ```
+
 
 * There are 7 columns having missing values.
 * The proportion of values for few columns shows significant differences i.e. Gender (more males), Married( more married), Credit_History (more having credit history).
@@ -187,7 +191,13 @@ loan_dep
 ggplot(loan_dep, aes(x=Dependents, y=Freq, fill=Dependents)) + geom_bar(stat='identity') + labs(title = 'Approved Loans by Dependents', y = "Percentage", x = "Dependents")
 ```
 
+```{r}
 
+G = cor(loan_data[6:(length(loan_data)-3)])
+corrplot(G, method = 'number') # colorful number
+```
+
+The numeric features do not seem to be strongly correlated with another so that is a factor that does not have to be dealt with.
 
 # Data Preparation
 
@@ -198,7 +208,7 @@ ggplot(loan_dep, aes(x=Dependents, y=Freq, fill=Dependents)) + geom_bar(stat='id
 plot_missing(loan_data)
 ```
 
-We can see above credit_history contributes to 8% of missing data alongwith self_employed that accounts for more than 5% of missing data. All records having missing categorical predictors will be removed. Next we will impute numeric values using MICE (Multivariate Imputation by Chained Equations).
+We can see above credit_history contributes to 8% of missing data along with self_employed that accounts for more than 5% of missing data. All records having missing categorical predictors will be removed. Next we will impute numeric values using MICE (Multivariate Imputation by Chained Equations).
 
 ```{r cat-missing}
 # Filter out the data which has missing categorical predictors
@@ -279,6 +289,7 @@ lda_predict <- lda_model %>%
 ```{r lda-accuracy}
 # accuracy
 mean(lda_predict$class==testing$Loan_Status)
+confusionMatrix(lda_predict$class, testing$Loan_Status)
 ```
 
 LDA model accuracy comes out as ~81%
@@ -310,31 +321,79 @@ mean(knn_predict == testing$Loan_Status) # accuracy
 confusionMatrix(knn_predict, testing$Loan_Status)
 ```
 
+KNN model accuracy comes out as ~80%
 
 
 ## Decision Trees
 
-## Random Forests
-
-# Model performance
+```{r Decision}
+# Decision Trees model
+set.seed(622)
+tree.loans = tree(Loan_Status~., data=training)
+summary(tree.loans)
+plot(tree.loans)
+text(tree.loans, pretty = 0)
+```
 
 ```{r}
+# prediction from decision tree model
+tree.predict<-predict(tree.loans, testing, type = 'class')
+mean(tree.predict == testing$Loan_Status) # accuracy
+confusionMatrix(tree.predict, testing$Loan_Status)
+```
+
+Decision Tree model accuracy comes out as ~80%
+
+## Random Forests
+
+```{r rf}
+set.seed(622)
+# Random Forest model
+rf.loans <- randomForest(Loan_Status~., data = training)
+rf.loans
 
 ```
 
+```{r}
+# prediction from random forest model
+rf.predict <- predict(rf.loans, testing,type='class')
+mean(rf.predict == testing$Loan_Status) # accuracy
+confusionMatrix(rf.predict, testing$Loan_Status)
+```
+
+Random Forest model accuracy comes out as ~80%
+
+# Model Performance
+
+All 4 of the models we built above have an accuracy rate of around 80% with the LDA model getting the light edge in accuracy (81.1% to 79.5% for the other 3). 
+
+Next we will look at some more detailed accuracy metrics produced from the predict function. 
+
+In this particular case, since the accuracy results are so similar it is wise to examine which models are most often leading to type 1 or type 2 errors. Assuming a null hypothesis is not giving a loan a type 1 error is giving someone a loan when they should not have gotten one and a type 2 error is not giving someone a loan when they should have gotten one. This correlates to the sensitivity and specificity respectively. The balanced accuracy metric takes the mean of sensitivity and specificity in order to diagnose if a model appears to be accurate but is really only predicting the positive or negative case correctly. In this case the random forest model has a slight edge over the LDA in balanced accuracy (0.7212 to 0.7201).
+
+Although the LDA has the smallest p-value it is still <0.0025 for all models so they can all be used so this does not help us decide which model to choose. The same can be said for the Mcnemar's p-value.
+
+The LDA also has the best Kappa score of 0.5046. The Kappa score can be a much more accurate indicator of accuracy then the standard accuracy rate. The kappa score takes into account the expected accuracy of a model given the instances of each class. This helps a lot with unbalanced class numbers in the dataset. It is encouraging to see the LDA Kappa is also the highest which corresponds with it having the highest accuracy. Although the accuracy score is high a Kappa score around 0.5046 only indicates a moderately good model.
+
+Given the LDa has the highest accuracy, kappa, and nearly the highest balanced accuracy, the LDA is the model that we would use going forward.
 
 # Conclusion
+
+After reviewing the results of 4 different models (LDA, KNN, Decision Tree, and Random Forest), we found that LDA is the most accurate by numerous metrics and should be considered the best model for this data. However, the metrics for these 4 models was very close and it did not leave us with no choice but to pick the LDA. If presenting this to stakeholders we would recommend the LDA model with the caveat they further testing and verification may be needed to ensure the LDA is the most accurate model of other iterations of the split of training and testing data.
 
 # References
 
 https://www.r-bloggers.com/2018/07/prop-table/
+
+https://www.datacamp.com/community/tutorials/decision-trees-R
+
+https://stats.stackexchange.com/questions/82162/cohens-kappa-in-plain-english
 
 # Code Appendix
 
 ```{r ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
 
 ```
-
 
 
 
