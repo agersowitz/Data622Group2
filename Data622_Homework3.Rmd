@@ -1,8 +1,11 @@
 ---
 title: "Data622 - Group2 - Homework3"
-author: "Zachary Palmore, Kevin Potter, Amit Kapoor"
+author: "Zachary Palmore, Kevin Potter, Amit Kapoor, Adam Gersowitz"
 date: "10/2/2021"
 output:
+  pdf_document:
+    latex_engine: xelatex
+    toc: yes
   html_document:
     fig_width: 15
     highlight: pygments
@@ -10,9 +13,6 @@ output:
     theme: flatly
     toc: yes
     toc_float: yes
-  pdf_document:
-    latex_engine: xelatex
-    toc: yes
 ---
 
 
@@ -39,6 +39,7 @@ library(caret)
 library(MASS)
 library(e1071)
 library(caret)
+library(corrplot)
 
 set.seed(622)
 ```
@@ -185,6 +186,13 @@ loan_dep
 
 ```{r}
 ggplot(loan_dep, aes(x=Dependents, y=Freq, fill=Dependents)) + geom_bar(stat='identity') + labs(title = 'Approved Loans by Dependents', y = "Percentage", x = "Dependents")
+```
+
+
+
+```{r}
+G = cor(loan_data[6:(length(loan_data)-3)])
+corrplot(G, method = 'number') # colorful number
 ```
 
 
