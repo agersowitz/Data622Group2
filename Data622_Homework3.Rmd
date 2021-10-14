@@ -383,6 +383,7 @@ After reviewing the results of 4 different models (LDA, KNN, Decision Tree, and 
 
 # References
 
+
 https://www.r-bloggers.com/2018/07/prop-table/
 
 https://www.datacamp.com/community/tutorials/decision-trees-R
