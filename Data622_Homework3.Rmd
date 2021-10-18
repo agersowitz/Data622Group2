@@ -3,9 +3,6 @@ title: "Data622 - Group2 - Homework3"
 author: "Zachary Palmore, Kevin Potter, Amit Kapoor, Adam Gersowitz"
 date: "10/2/2021"
 output:
-  pdf_document:
-    latex_engine: xelatex
-    toc: yes
   html_document:
     fig_width: 15
     highlight: pygments
@@ -13,6 +10,9 @@ output:
     theme: flatly
     toc: yes
     toc_float: yes
+  pdf_document:
+    latex_engine: xelatex
+    toc: yes
 ---
 
 
@@ -309,11 +309,20 @@ testing <- loan_data[-partition,]
 
 ## Linear Discriminant Analysis (LDA)
 
+Linear Discriminant analysis is when the dependent variable has two categories and the LDA function that passes through the means of the two categories can be used to discriminate between the two categories. LDA projects the data on a new axis to maximize the separation between two categories. Linear Discriminant Analysis is similar to PCA but its focus is more towards maximizing the separability among known categories. LDA is a special form of QDA, where each class are assumed to share the same covariance matrix
+
+
 ```{r lda}
 # LDA model
 lda_model <- lda(Loan_Status~., data = loan_data)
 lda_model
 ```
+
+
+```{r plot-lda}
+plot(lda_model)
+```
+
 
 ```{r}
 # prediction from lda model
