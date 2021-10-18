@@ -219,14 +219,6 @@ To determine how well each variable is correlated with our target variable and w
 
 
 ```{r}
-
-G = cor(loan_data[6:(length(loan_data)-3)])
-corrplot(G, method = 'number') # colorful number
-```
-
-The numeric features do not seem to be strongly correlated with another so that is a factor that does not have to be dealt with.
-
-```{r}
 G = cor(loan_data[6:(length(loan_data)-3)])
 corrplot(G, method = 'number') # colorful number
 ```
@@ -340,6 +332,13 @@ confusionMatrix(lda_predict$class, testing$Loan_Status)
 LDA model accuracy comes out as ~81%
 
 ## K-nearest neighbor (KNN)
+
+A K-nearest neighbor, or KNN algorithm, is a method of classifying data that relies on similar points being close together to identify groups. It uses the distance between data points to assign the nearest points to groups based on the value of K. This is why it is important to preprocess the data. 
+
+In this case we scaled and centered the data to reduce bias and improve our model’s predictive capability (especially in our model’s accuracy) as we have done below. Sometimes these groups are called batches. In general, smaller values for K indicate fewer batches and larger distances between similar points while larger values for K, have smaller distances between similar points. This K-value can be optimized.
+
+To determine our optimal K-value we used a function from the caret package that iterates through a number of K-neighbors consecutively until it experimentally finds the one that produces the most accurate predictions. This function stops once it recognizes overfitting. It then selects the best value for K and creates a model with it. The graph below shows how this process worked and our optimal value K is the maximum point on the line.
+
 
 ```{r knn}
 # KNN model
