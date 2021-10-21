@@ -1,0 +1,161 @@
+---
+title: "Data622 - Group2 - Homework4"
+author: "Zachary Palmore, Kevin Potter, Amit Kapoor, Adam Gersowitz, Paul Perez"
+date: "10/21/2021"
+output:
+  pdf_document:
+    latex_engine: xelatex
+    toc: yes
+  html_document:
+    fig_width: 15
+    highlight: pygments
+    number_sections: no
+    theme: flatly
+    toc: yes
+    toc_float: yes
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, error=FALSE, warning=FALSE, message=FALSE, fig.align="center", fig.width = 10)
+```
+
+
+# Overview
+
+
+# Approach
+
+
+```{r libraries, include=FALSE, warning=FALSE, message=FALSE}
+# Libraries
+set.seed(622)
+```
+
+# Data Exploration
+## Data Characteristics
+
+
+```{r data}
+# read data
+
+```
+
+
+## Data summary
+
+
+```{r loan_data_summary}
+
+```
+
+
+
+# Data Preparation
+
+## Handling missing values
+
+```{r}
+# plot missing values
+plot_missing(loan_data)
+```
+
+
+
+```{r cat-missing}
+# Filter out 
+
+```
+
+
+
+```{r num-missing}
+# impute numeric predictors using mice
+
+```
+
+
+```{r}
+dim(loan_data)
+```
+
+
+## Preprocess using transformation
+
+
+```{r transform-train}
+
+```
+
+
+## Training and Test Partition
+
+In this step for data preparation we will partition the training dataset in training and validation sets using `createDataPartition` method from `caret` package. We will reserve 75% for training and rest 25% for validation purpose.
+
+```{r partition}
+set.seed(622)
+partition <- createDataPartition(loan_data$Loan_Status, p=0.75, list = FALSE)
+
+training <- loan_data[partition,]
+testing <- loan_data[-partition,]
+
+# training/validation partition for independent variables
+#X.train <- ld.clean[partition, ] %>% dplyr::select(-Loan_Status)
+#X.test <- ld.clean[-partition, ] %>% dplyr::select(-Loan_Status)
+
+# training/validation partition for dependent variable Loan_Status
+#y.train <- ld.clean$Loan_Status[partition]
+#y.test <- ld.clean$Loan_Status[-partition]
+```
+
+
+# Build Models
+
+## Linear Discriminant Analysis (LDA)
+
+## K-nearest neighbor (KNN)
+
+## Decision Trees
+
+
+## Random Forests
+
+
+# Model Performance
+
+
+
+# Conclusion
+
+
+# References
+
+
+https://www.r-bloggers.com/2018/07/prop-table/
+
+https://www.datacamp.com/community/tutorials/decision-trees-R
+
+https://stats.stackexchange.com/questions/82162/cohens-kappa-in-plain-english
+
+# Code Appendix
+
+```{r ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

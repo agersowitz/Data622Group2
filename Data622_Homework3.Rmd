@@ -1,6 +1,6 @@
 ---
 title: "Data622 - Group2 - Homework3"
-author: "Zachary Palmore, Kevin Potter, Amit Kapoor, Adam Gersowitz"
+author: "Zachary Palmore, Kevin Potter, Amit Kapoor, Adam Gersowitz, Paul Perez"
 date: "10/2/2021"
 output:
   pdf_document:
