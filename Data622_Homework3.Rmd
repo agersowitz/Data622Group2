@@ -3,6 +3,9 @@ title: "Data622 - Group2 - Homework3"
 author: "Zachary Palmore, Kevin Potter, Amit Kapoor, Adam Gersowitz, Paul Perez"
 date: "10/2/2021"
 output:
+  pdf_document:
+    latex_engine: xelatex
+    toc: yes
   html_document:
     fig_width: 15
     highlight: pygments
@@ -10,9 +13,6 @@ output:
     theme: flatly
     toc: yes
     toc_float: yes
-  pdf_document:
-    latex_engine: xelatex
-    toc: yes
 ---
 
 
@@ -303,30 +303,30 @@ testing <- loan_data[-partition,]
 
 Linear Discriminant analysis is when the dependent variable has two categories and the LDA function that passes through the means of the two categories can be used to discriminate between the two categories. LDA projects the data on a new axis to maximize the separation between two categories. Linear Discriminant Analysis is similar to PCA but its focus is more towards maximizing the separability among known categories. LDA is a special form of QDA, where each class are assumed to share the same covariance matrix
 
+**Here LDA doesn't seem to be a good model as below plots shows that data points given are not linearly separable.**
 
-
-```{r}
+```{r ls-plot11}
 training %>%
   ggplot(aes(x = LoanAmount, y= ApplicantIncome, color = Loan_Status)) + geom_point()
 ```
 
 
-```{r}
+```{r ls-plot12}
 training %>%
   ggplot(aes(x = LoanAmount, y= CoapplicantIncome, color = Loan_Status)) + geom_point()
 ```
 
-```{r}
+```{r ls-plot13}
 training %>%
   ggplot(aes(x = LoanAmount, y= ApplicantIncome+CoapplicantIncome, color = Loan_Status)) + geom_point()
 ```
 
-```{r lda}
+
+```{r lda-model}
 # LDA model
-lda_model <- lda(Loan_Status~., data = loan_data)
+lda_model <- lda(Loan_Status ~ LoanAmount+ApplicantIncome+CoapplicantIncome, data = loan_data)
 lda_model
 ```
-
 
 
 ```{r}
@@ -336,13 +336,6 @@ lda_predict <- lda_model %>%
 ```
 
 
-```{r lda-accuracy}
-# accuracy
-mean(lda_predict$class==testing$Loan_Status)
-confusionMatrix(lda_predict$class, testing$Loan_Status)
-```
-
-LDA model accuracy comes out as ~81%
 
 ## K-nearest neighbor (KNN)
 
