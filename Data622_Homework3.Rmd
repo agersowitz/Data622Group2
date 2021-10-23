@@ -26,7 +26,7 @@ In this project we will develop models that allow us to predict whether a loan i
 
 
 # Approach
-For this project, we begin with data exploration to understand the relationships our target variable ‘Loan_Status’ will have with our variables and the variables’ relationships to each other.  This allows us to determine the steps necessary to set up for model development. Once we have an understanding of these variables we use that knowledge to prepare the data. We handle missing values, subset, train and split the data 75/25 so that we may better extract information from when modeling. Then, we build the models and predict with the testing dataset. 
+For this project, we begin with data exploration to understand the relationships our target variable ‘Loan_Status’ will have with our variables and the variables’ relationships to each other.  This allows us to determine the steps necessary to set up for model development. Once we have an understanding of these variables we use that knowledge to prepare the data. We handle missing values, subset, train and split the data 75/25 so that we may better extract information when modeling. Then, we build the models and predict with the testing dataset. 
 We focus on prediction accuracy when assessing the models but consider a host of performance statistics and real-world applications to determine which model is best. 
 
 
@@ -135,9 +135,9 @@ loan_factm <- melt(loan_fact, measure.vars = cat_cols, variable.name = 'metric',
 
 # plot categorical columns
 ggplot(loan_factm, aes(x = value)) + 
-  geom_bar() + 
-  scale_fill_brewer(palette = "Set1") + 
-  facet_wrap( ~ metric, nrow = 5L, scales = 'free') + coord_flip()
+  geom_bar(aes(fill = metric)) + 
+  facet_wrap( ~ metric, nrow = 5L, scales = 'free') + coord_flip() + 
+  theme(legend.position = "none")
 ```
 
 
@@ -150,7 +150,7 @@ We also generate histograms with the count of each observation to assess our num
 plot_histogram(loan_data, geom_histogram_args = list("fill" = "tomato4"))
 ```
 
-The applicant income and co-applicant income variables are highly right skewed with a smaller number of individual applicants stretching the distribution towards higher incomes. For analysis purposes, we must keep in mind that only a handful of applicants had higher incomes while the bulk of applicants were concentrated at the lower end of the income distribution. The loan amount term has one spike at 360. Meanwhile, the loan amount is the closest to normal. These results are consistent with our summary table. 
+The applicant income and co-applicant income variables are highly right skewed with a smaller number of individual applicants stretching the distribution towards higher incomes. For analysis purposes, we must keep in mind that only a handful of applicants had higher incomes while the bulk of applicants were concentrated at the lower end of the income distribution. The loan amount term has one spike at 360. Meanwhile, the loan amount distribution is the closest to normal. These results are consistent with our summary table. 
 
 Next we will review the impact of the categorical variables’ proportions on loan approval in more detail by isolating the factor levels individually. Here again, we visualize the proportions as a bar chart without missing values and expand the size of the chart to see the nuances of each. These are placed alongside each variable's frequency table by level to visualize their proportions. The results are as follows:
 
@@ -215,12 +215,17 @@ ggplot(loan_dep, aes(x=Dependents, y=Freq, fill=Dependents)) + geom_bar(stat='id
 These bar charts confirm our thoughts about the dataset’s disproportionalities. Missing values have little effect on the overall proportions and so they can be removed. It remains male dominated with applicants who are married, have no dependents, are highly educated, and have a long credit history.
 
 ## Correlations
-To determine how well each variable is correlated with our target variable and with one another, we construct a correlation plot. This plot contains the values of all correlation between variables represented by colors and numbers. The row we review the most is our target variable, ‘Loan_Status.’
+To determine how well each variable is correlated with our target variable and with one another, we construct a correlation plot. This plot contains the values of all correlation between variables represented by colors and numbers. The lighter the color, the lower the correlation. Meanwhile, darker blue indicates stronger positive correlations while darker red indicates stronger negative correlations.
 
 
 ```{r}
-G = cor(loan_data[6:(length(loan_data)-3)])
-corrplot(G, method = 'number') # colorful number
+cors <- loan_data %>% 
+  select_if(is.numeric) %>% 
+  na.omit() %>%
+  cor()
+corrplot::corrplot(cors, method="number")
+# G = cor(loan_data[6:(length(loan_data)-3)])
+# corrplot(G, method = 'number') # colorful number
 ```
 
 
@@ -236,7 +241,7 @@ Given that our numeric features have correlation values near 0, they do not seem
 plot_missing(loan_data)
 ```
 
-We can see above credit_history contributes to 8% of missing data along with self_employed that accounts for more than 5% of missing data. All records having missing categorical predictors will be removed. Next we will impute numeric values using MICE (Multivariate Imputation by Chained Equations).
+We can see from this chart that credit_history contributes to 8.14% of missing data, self_employed accounts for more than 5% of missing data and so on. All records having missing categorical predictors must be removed. We perform this removal by filtering the variables to their complete cases. We then impute numeric values using MICE (Multivariate Imputation by Chained Equations).
 
 ```{r cat-missing}
 # Filter out the data which has missing categorical predictors
@@ -259,12 +264,13 @@ loan_data <- complete(mice(data=loan_data, method="pmm", print=FALSE))
 dim(loan_data)
 ```
 
-Finally our clean dataset contains 511 rows and 12 columns.
+Our final, missing value cleaned dataset contains 511 rows and 12 columns. This reduces the observation size by the amount of missing values present in each variable because those missing were imputed or filtered out. 
 
 
 ## Preprocess using transformation
 
-We have seen above that numeric features are right skewed so in this step we will use caret `preprocess` method using box cox, center and scale transformation.
+Due to the right skew in the numeric features, we adjust the distribution to center, scale, and transform the data to reduce bias. This preprocessing uses the caret package's 'preprocessing' function to return a box cox transformation on all numeric variables in our loan dataset. These numeric variables include the applicant and coapplicant income, the loan amount, and loan amount term. We process further with a center scaling of the values to place them all within the same grid axes. This will provide greater clarity to understand linearity and separability before modeling. 
+
 
 ```{r transform-train}
 # library(e1071) - where this was used
@@ -376,6 +382,8 @@ KNN model accuracy comes out as ~80%
 
 ## Decision Trees
 
+In a decision tree model the data is split into distinct options of 'yes' or 'no' based on parameters that make the options possible. These splits are called nodes and the deicsions made at them can be mapped. For example, we provide a small decision tree that shows how decisions can be made based on credit history, coapplicant income, and property area.
+
 ```{r Decision}
 # Decision Trees model
 set.seed(622)
@@ -392,9 +400,11 @@ mean(tree.predict == testing$Loan_Status) # accuracy
 confusionMatrix(tree.predict, testing$Loan_Status)
 ```
 
-Decision Tree model accuracy comes out as ~80%
+Our decision Tree model accuracy comes out as ~80%. As shown in the confusion matrix, there is room for improvement in this model's sensitivity among other variables. We try to improve this with the random forest model. 
 
 ## Random Forests
+
+A random forest model works by building a number of decision trees and selecting the most accurate decisions from the trees. These decisions are randomized and in our case, tries 3 variables at each node or split in the tree. We set our number of trees to 500 and train the model to predict loan status. 
 
 ```{r rf}
 set.seed(622)
@@ -411,7 +421,7 @@ mean(rf.predict == testing$Loan_Status) # accuracy
 confusionMatrix(rf.predict, testing$Loan_Status)
 ```
 
-Random Forest model accuracy comes out as ~80%
+Our random Forest model accuracy comes out as ~81%. This is an improvement upon our decision model and the sensitivity did increase as we desired. 
 
 # Model Performance
 
