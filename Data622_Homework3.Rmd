@@ -13,6 +13,7 @@ output:
     theme: flatly
     toc: yes
     toc_float: yes
+  always_allow_html: yes
 ---
 
 
@@ -48,6 +49,8 @@ library(caret)
 library(tree)
 library(randomForest)
 library(corrplot)
+library(kableExtra)
+library(htmltools)
 
 set.seed(622)
 ```
@@ -332,6 +335,7 @@ training %>%
 # LDA model
 lda_model <- lda(Loan_Status ~ LoanAmount+ApplicantIncome+CoapplicantIncome, data = loan_data)
 lda_model
+plot(lda_model)
 ```
 
 
@@ -340,6 +344,8 @@ lda_model
 lda_predict <- lda_model %>% 
   predict(testing)
 ```
+
+
 
 
 
@@ -374,7 +380,8 @@ knn_model
 plot(knn_model)
 knn_predict <- predict(knn_model,newdata = testing)
 mean(knn_predict == testing$Loan_Status) # accuracy
-confusionMatrix(knn_predict, testing$Loan_Status)
+conf.mat.knn <- confusionMatrix(knn_predict, testing$Loan_Status)
+conf.mat.knn
 ```
 
 KNN model accuracy comes out as ~80%
@@ -414,7 +421,8 @@ plot(treeImp, top = 10)
 # prediction from decision tree model
 tree.predict <- predict(tree.loans, testing,type='raw')
 mean(tree.predict == testing$Loan_Status) # accuracy
-confusionMatrix(tree.predict, testing$Loan_Status)
+conf.mat.decisiontree <- confusionMatrix(tree.predict, testing$Loan_Status)
+conf.mat.decisiontree
 ```
 
 Our decision Tree model accuracy comes out as ~81%. As shown in the confusion matrix, there is room for improvement in this model's sensitivity among other variables. We try to improve this with the random forest model. 
@@ -441,28 +449,39 @@ plot(rfImp, top = 10)
 # prediction from random forest model
 rf.predict <- predict(rf.loans, testing,type='raw')
 mean(rf.predict == testing$Loan_Status) # accuracy
-confusionMatrix(rf.predict, testing$Loan_Status)
+conf.mat.randomforest <- confusionMatrix(rf.predict, testing$Loan_Status)
+conf.mat.randomforest
 ```
 
 Our random Forest model accuracy comes out as ~82%. This is an improvement upon our decision model and the sensitivity did increase as we desired. 
 
 # Model Performance
 
-All 4 of the models we built above have an accuracy rate of around 80% with the LDA model getting the light edge in accuracy (81.1% to 79.5% for the other 3). 
+All 4 of the models we built above have an accuracy rate of around 80% with the fine tuned random forest model getting the light edge in accuracy with 82%, compared to roughly 80% accuracy for each of the LDA, KNN, and Decision Tree models. A table of the results with our selection criteria is shown for reference. Note, we remove LDA because it failed to be linearly seperable.
 
-Next we will look at some more detailed accuracy metrics produced from the predict function. 
+```{r}
+results <- data.frame(matrix(names(conf.mat.knn$overall)))
+results$knn <- round(conf.mat.knn$overall, 4)
+results$decisiontree <- round(conf.mat.decisiontree$overall, 4)
+results$randomforest <- round(conf.mat.randomforest$overall, 4)
+results %>%
+  rename(statistic = matrix.names.conf.mat.knn.overall..) %>% 
+  kable()
+```
 
-In this particular case, since the accuracy results are so similar it is wise to examine which models are most often leading to type 1 or type 2 errors. Assuming a null hypothesis is not giving a loan a type 1 error is giving someone a loan when they should not have gotten one and a type 2 error is not giving someone a loan when they should have gotten one. This correlates to the sensitivity and specificity respectively. The balanced accuracy metric takes the mean of sensitivity and specificity in order to diagnose if a model appears to be accurate but is really only predicting the positive or negative case correctly. In this case the random forest model has a slight edge over the LDA in balanced accuracy (0.7212 to 0.7201).
+In this particular case, since the accuracy results are so similar it is also wise to examine which models are most often leading to type 1 or type 2 errors. Assuming a null hypothesis is not giving a loan a type 1 error is giving someone a loan when they should not have gotten one and a type 2 error is not giving someone a loan when they should have gotten one. This correlates to the sensitivity and specificity respectively. The balanced accuracy metric takes the mean of sensitivity and specificity in order to diagnose if a model appears to be accurate but is really only predicting the positive or negative case correctly. In this case the random forest model has a slight edge over the LDA in balanced accuracy (0.7212 to 0.7201).
 
-Although the LDA has the smallest p-value it is still <0.0025 for all models so they can all be used so this does not help us decide which model to choose. The same can be said for the Mcnemar's p-value.
+Although the Random Forest has the smallest p-value it is still less than 0.0025 for all models so they can all be used. Unfortunately, this does not help us decide which model to choose. They are all signifcant results. The same can be said for the Mcnemar's p-value.
 
-The LDA also has the best Kappa score of 0.5046. The Kappa score can be a much more accurate indicator of accuracy then the standard accuracy rate. The kappa score takes into account the expected accuracy of a model given the instances of each class. This helps a lot with unbalanced class numbers in the dataset. It is encouraging to see the LDA Kappa is also the highest which corresponds with it having the highest accuracy. Although the accuracy score is high a Kappa score around 0.5046 only indicates a moderately good model.
+The Random Forest also has the best Kappa score of 0.5046. The Kappa score can be a much more accurate indicator of accuracy then the standard accuracy rate. The kappa score takes into account the expected accuracy of a model given the instances of each class. This helps a lot with unbalanced class numbers in the dataset. It is encouraging to see the Random Forest Kappa is also the highest which corresponds with it having the highest accuracy. Although the accuracy score is high a Kappa score around 0.5046 only indicates a moderately good model.
 
-Given the LDa has the highest accuracy, kappa, and nearly the highest balanced accuracy, the LDA is the model that we would use going forward.
+Given the Random Forest model has the highest accuracy, kappa, and best balanced accuracy statistics, the Random Forest model is the mode we would use going forward.
 
 # Conclusion
 
-After reviewing the results of 4 different models (LDA, KNN, Decision Tree, and Random Forest), we found that LDA is the most accurate by numerous metrics and should be considered the best model for this data. However, the metrics for these 4 models was very close and it did not leave us with no choice but to pick the LDA. If presenting this to stakeholders we would recommend the LDA model with the caveat they further testing and verification may be needed to ensure the LDA is the most accurate model of other iterations of the split of training and testing data.
+After reviewing the results of 4 different models (LDA, KNN, Decision Tree, and Random Forest), we found that the Random Forest model is the most accurate by numerous metrics and should be considered the best model for this data. However, the metrics for these 4 models were very close when measuring accuracy overall. LDA's performance was similar to our other 3 selected models. If LDA had not failed the linear separability test,it would have been our second best choice. 
+
+When presenting this to stakeholders we would recommend the Random Forest model with the caveat that further testing and verification may be needed to ensure this is the most accurate model. For this report, we largely avoided distorting the data which meant minimizing feature manipulation. Further testing could include more feature manipulation to fine tune the model for a specific performance statistic, especially those statistics that do not focus on accuracy. It may also be beneficial to complete other iterations of the split of training and testing data with differing proportions.  
 
 # References
 
