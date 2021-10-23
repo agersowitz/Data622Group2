@@ -157,60 +157,60 @@ The applicant income and co-applicant income variables are highly right skewed w
 
 Next we will review the impact of the categorical variables’ proportions on loan approval in more detail by isolating the factor levels individually. Here again, we visualize the proportions as a bar chart without missing values and expand the size of the chart to see the nuances of each. These are placed alongside each variable's frequency table by level to visualize their proportions. The results are as follows:
 
-```{r}
+```{r ch-loanstatus}
 loan_ch <- with(loan_data, table(Credit_History, Loan_Status)) %>% 
   prop.table(margin = 1) %>% as.data.frame() %>% filter(Loan_Status == 'Y')
 
 loan_ch
 ```
 
-```{r}
+```{r ch-ls-plot}
 ggplot(loan_ch, aes(x=Credit_History, y=Freq, fill=Credit_History)) + geom_bar(stat='identity') + labs(title = 'Approved Loans by Credit History', y = "Percentage", x = "Credit History")
 ```
 
-```{r}
+```{r gen-loanstatus}
 loan_gen <- with(loan_data, table(Gender, Loan_Status)) %>% 
   prop.table(margin = 1) %>% as.data.frame() %>% filter(Loan_Status == 'Y')
 
 loan_gen
 ```
 
-```{r}
+```{r gen-ls-plot}
 ggplot(loan_gen, aes(x=Gender, y=Freq, fill=Gender)) + geom_bar(stat='identity') + labs(title = 'Approved Loans by Gender', y = "Percentage", x = "Gender")
 ```
 
-```{r}
+```{r edu-loanstatus}
 loan_ed <- with(loan_data, table(Education, Loan_Status)) %>% 
   prop.table(margin = 1) %>% as.data.frame() %>% filter(Loan_Status == 'Y')
 
 loan_ed
 ```
 
-```{r}
+```{r ed-ls-plot}
 ggplot(loan_ed, aes(x=Education, y=Freq, fill=Education)) + geom_bar(stat='identity') + labs(title = 'Approved Loans by Education', y = "Percentage", x = "Education")
 ```
 
 
-```{r}
+```{r mar-loanstatus}
 loan_mar <- with(loan_data, table(Married, Loan_Status)) %>% 
   prop.table(margin = 1) %>% as.data.frame() %>% filter(Loan_Status == 'Y')
 
 loan_mar
 ```
 
-```{r}
+```{r mar-ls-plot}
 ggplot(loan_mar, aes(x=Married, y=Freq, fill=Married)) + geom_bar(stat='identity') + labs(title = 'Approved Loans by Married', y = "Percentage", x = "Married")
 ```
 
 
-```{r}
+```{r dep-loanstatus}
 loan_dep <- with(loan_data, table(Dependents, Loan_Status)) %>% 
   prop.table(margin = 1) %>% as.data.frame() %>% filter(Loan_Status == 'Y')
 
 loan_dep
 ```
 
-```{r}
+```{r dep-ls-plot}
 ggplot(loan_dep, aes(x=Dependents, y=Freq, fill=Dependents)) + geom_bar(stat='identity') + labs(title = 'Approved Loans by Dependents', y = "Percentage", x = "Dependents")
 ```
 
@@ -221,7 +221,7 @@ These bar charts confirm our thoughts about the dataset’s disproportionalities
 To determine how well each variable is correlated with our target variable and with one another, we construct a correlation plot. This plot contains the values of all correlation between variables represented by colors and numbers. The lighter the color, the lower the correlation. Meanwhile, darker blue indicates stronger positive correlations while darker red indicates stronger negative correlations.
 
 
-```{r}
+```{r corr}
 cors <- loan_data %>% 
   select_if(is.numeric) %>% 
   na.omit() %>%
@@ -239,7 +239,7 @@ Given that our numeric features have correlation values near 0, they do not seem
 
 ## Handling missing values
 
-```{r}
+```{r miss-plot}
 # plot missing values
 plot_missing(loan_data)
 ```
@@ -263,7 +263,7 @@ loan_data <- complete(mice(data=loan_data, method="pmm", print=FALSE))
 ```
 
 
-```{r}
+```{r dim-loan}
 dim(loan_data)
 ```
 
@@ -296,13 +296,6 @@ partition <- createDataPartition(loan_data$Loan_Status, p=0.75, list = FALSE)
 training <- loan_data[partition,]
 testing <- loan_data[-partition,]
 
-# training/validation partition for independent variables
-#X.train <- ld.clean[partition, ] %>% dplyr::select(-Loan_Status)
-#X.test <- ld.clean[-partition, ] %>% dplyr::select(-Loan_Status)
-
-# training/validation partition for dependent variable Loan_Status
-#y.train <- ld.clean$Loan_Status[partition]
-#y.test <- ld.clean$Loan_Status[-partition]
 ```
 
 
@@ -335,7 +328,6 @@ training %>%
 # LDA model
 lda_model <- lda(Loan_Status ~ LoanAmount+ApplicantIncome+CoapplicantIncome, data = loan_data)
 lda_model
-plot(lda_model)
 ```
 
 
@@ -344,7 +336,6 @@ plot(lda_model)
 lda_predict <- lda_model %>% 
   predict(testing)
 ```
-
 
 
 
@@ -375,7 +366,7 @@ knn_model
 
 
 
-```{r}
+```{r plot-knn}
 # prediction from knn model
 plot(knn_model)
 knn_predict <- predict(knn_model,newdata = testing)
@@ -391,7 +382,7 @@ KNN model accuracy comes out as ~80%
 
 In a decision tree model the data is split into distinct options of 'yes' or 'no' based on parameters that make the options possible. These splits are called nodes and the decisions made at them can be mapped. For example, we provide a small decision tree that shows how decisions can be made based on credit history, coapplicant income, and property area.
 
-```{r}
+```{r dt-model}
 # Decision Trees model
 set.seed(622)
 tree.loans = tree(Loan_Status~., data=training)
@@ -417,7 +408,7 @@ treeImp <- varImp(tree.loans, scale = FALSE)
 plot(treeImp, top = 10)
 ```
 
-```{r}
+```{r dt-pred}
 # prediction from decision tree model
 tree.predict <- predict(tree.loans, testing,type='raw')
 mean(tree.predict == testing$Loan_Status) # accuracy
@@ -445,7 +436,7 @@ rfImp <- varImp(rf.loans, scale = FALSE)
 plot(rfImp, top = 10)
 ```
 
-```{r}
+```{r rf-pred}
 # prediction from random forest model
 rf.predict <- predict(rf.loans, testing,type='raw')
 mean(rf.predict == testing$Loan_Status) # accuracy
@@ -459,7 +450,7 @@ Our random Forest model accuracy comes out as ~82%. This is an improvement upon 
 
 All 4 of the models we built above have an accuracy rate of around 80% with the fine tuned random forest model getting the light edge in accuracy with 82%, compared to roughly 80% accuracy for each of the LDA, KNN, and Decision Tree models. A table of the results with our selection criteria is shown for reference. Note, we remove LDA because it failed to be linearly seperable.
 
-```{r}
+```{r model-per}
 results <- data.frame(matrix(names(conf.mat.knn$overall)))
 results$knn <- round(conf.mat.knn$overall, 4)
 results$decisiontree <- round(conf.mat.decisiontree$overall, 4)
