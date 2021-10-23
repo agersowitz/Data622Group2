@@ -382,9 +382,9 @@ KNN model accuracy comes out as ~80%
 
 ## Decision Trees
 
-In a decision tree model the data is split into distinct options of 'yes' or 'no' based on parameters that make the options possible. These splits are called nodes and the deicsions made at them can be mapped. For example, we provide a small decision tree that shows how decisions can be made based on credit history, coapplicant income, and property area.
+In a decision tree model the data is split into distinct options of 'yes' or 'no' based on parameters that make the options possible. These splits are called nodes and the decisions made at them can be mapped. For example, we provide a small decision tree that shows how decisions can be made based on credit history, coapplicant income, and property area.
 
-```{r Decision}
+```{r}
 # Decision Trees model
 set.seed(622)
 tree.loans = tree(Loan_Status~., data=training)
@@ -393,35 +393,58 @@ plot(tree.loans)
 text(tree.loans, pretty = 0)
 ```
 
+We also review which variables are most important for making decisions in our model.These are shown in the plot as a straight line extending from the axis to the length of its importance to the model. Accuracy was also used to select the optimal model using the largest value where our final tree depth  used for this model is 1. 
+
+
+```{r Decision}
+# Decision Trees model
+set.seed(622)
+control <- trainControl(method="repeatedcv", number=10, repeats=3, search='grid')
+metric <- "Accuracy"
+tunegrid <- expand.grid(.maxdepth=c(1:15))
+tree.loans <- train(Loan_Status~., data = training, method="rpart2", tuneGrid=tunegrid, trControl=control)
+print(tree.loans)
+plot(tree.loans)
+
+treeImp <- varImp(tree.loans, scale = FALSE)
+plot(treeImp, top = 10)
+```
+
 ```{r}
 # prediction from decision tree model
-tree.predict<-predict(tree.loans, testing, type = 'class')
+tree.predict <- predict(tree.loans, testing,type='raw')
 mean(tree.predict == testing$Loan_Status) # accuracy
 confusionMatrix(tree.predict, testing$Loan_Status)
 ```
 
-Our decision Tree model accuracy comes out as ~80%. As shown in the confusion matrix, there is room for improvement in this model's sensitivity among other variables. We try to improve this with the random forest model. 
+Our decision Tree model accuracy comes out as ~81%. As shown in the confusion matrix, there is room for improvement in this model's sensitivity among other variables. We try to improve this with the random forest model. 
 
 ## Random Forests
 
-A random forest model works by building a number of decision trees and selecting the most accurate decisions from the trees. These decisions are randomized and in our case, tries 3 variables at each node or split in the tree. We set our number of trees to 500 and train the model to predict loan status. 
+A random forest model works by building a number of decision trees and selecting the most accurate decisions from the trees. These decisions are randomized and in our case, tries 3 variables at each node or split in the tree. We set our number of trees to 500 and train the model to predict loan status. We review the variables of most importance in the model and in this case, give the model a boost to improve accuracy. 
 
 ```{r rf}
 set.seed(622)
 # Random Forest model
-rf.loans <- randomForest(Loan_Status~., data = training)
-rf.loans
+control <- trainControl(method="repeatedcv", number=10, repeats=3, search="grid")
+metric <- "Accuracy"
+tunegrid <- expand.grid(.mtry=c(1:15))
+rf.loans <- train(Loan_Status~., data = training, method="rf",tuneGrid=tunegrid, trControl=control)
+print(rf.loans)
+plot(rf.loans)
 
+rfImp <- varImp(rf.loans, scale = FALSE)
+plot(rfImp, top = 10)
 ```
 
 ```{r}
 # prediction from random forest model
-rf.predict <- predict(rf.loans, testing,type='class')
+rf.predict <- predict(rf.loans, testing,type='raw')
 mean(rf.predict == testing$Loan_Status) # accuracy
 confusionMatrix(rf.predict, testing$Loan_Status)
 ```
 
-Our random Forest model accuracy comes out as ~81%. This is an improvement upon our decision model and the sensitivity did increase as we desired. 
+Our random Forest model accuracy comes out as ~82%. This is an improvement upon our decision model and the sensitivity did increase as we desired. 
 
 # Model Performance
 
