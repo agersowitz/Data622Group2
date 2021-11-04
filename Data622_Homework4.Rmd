@@ -22,13 +22,30 @@ knitr::opts_chunk$set(echo=FALSE, error=FALSE, warning=FALSE, message=FALSE, fig
 
 
 # Overview
-
+In this project, we will analyze a real-life mental health dataset to provide context around suicide prediction given the variety of unidentifiable demographic data.
 
 # Approach
-
+We will first perform exploratory data analysis on dataset to later inform our modeling approaches for Clustering, Principal Compnent Analysis, Gradient Boosting, and Support Vector Machines.
 
 ```{r libraries, include=FALSE, warning=FALSE, message=FALSE}
 # Libraries
+
+library(summarytools)
+library(tidyverse)
+library(DataExplorer)
+library(reshape2)
+library(mice)
+library(caret)
+library(MASS)
+library(e1071)
+library(tree)
+library(corrplot)
+library(kableExtra)
+library(htmltools)
+library(readxl)
+
+set.seed(622)
+
 set.seed(622)
 ```
 
@@ -38,15 +55,32 @@ set.seed(622)
 
 ```{r data}
 # read data
-
+adhd_data <- read_excel("ADHD_data.xlsx", sheet = "Data") %>% na_if("") %>% dplyr::select(-1)
+#columns <- list(dimnames(adhd_data)[2])
+#df <- adhd_data[,2:53]
+adhd_data[,2:53] <- lapply(adhd_data[,2:53], factor)
 ```
 
+
+
+```{r, cat-bar, fig.length =20, fig.width=10}
+# select categorical columns
+cat_cols <- dimnames(adhd_data[,2:53])[[2]]
+adhd_fact <-  adhd_data[cat_cols]
+# long format
+adhd_factm <- melt(adhd_fact, measure.vars = cat_cols, variable.name = 'metric', value.name = 'value')
+# plot categorical columns
+ggplot(adhd_factm, aes(x = value)) + 
+  geom_bar(aes(fill = metric)) + 
+  facet_wrap( ~ metric, nrow = 5L, scales = 'free') + coord_flip() + 
+  theme(legend.position = "none")
+```
 
 ## Data summary
 
 
-```{r loan_data_summary}
-
+```{r adhd_data_summary}
+dfSummary(adhd_data, style = 'grid', graph.col = FALSE)
 ```
 
 
@@ -57,26 +91,40 @@ set.seed(622)
 
 ```{r}
 # plot missing values
-plot_missing(loan_data)
+plot_missing(adhd_data)
 ```
 
 
 
 ```{r cat-missing}
 # Filter out 
-
+#adhd_data <- adhd_data %>% filter(!is.na(Alcohol) &
+#                                  !is.na(THC) &
+#                                  !is.na(Cocaine) &
+#                                  !is.na(Stimulants) &
+#                                  !is.na(`Sedative-hypnotics`) &
+#                                  !is.na(Opioids) &
+#                                  !is.na(`Court order`) &
+#                                  !is.na(Education) &
+#                                  !is.na(`Hx of Violence`) &
+#                                  !is.na(`Disorderly Conduct`) &
+#                                  !is.na(Suicide) &
+#                                  !is.na(Abuse) &
+#                                  !is.na(`Non-subst Dx`) &
+#                                  !is.na(`Subst Dx`) &
+#                                  !is.na(`Psych meds.`))
 ```
 
 
 
 ```{r num-missing}
 # impute numeric predictors using mice
-
+#adhd_data <- complete(mice(data=adhd_data[,:53], method="pmm", print=FALSE))
 ```
 
 
 ```{r}
-dim(loan_data)
+dim(adhd_data)
 ```
 
 
@@ -94,20 +142,27 @@ In this step for data preparation we will partition the training dataset in trai
 
 ```{r partition}
 set.seed(622)
-partition <- createDataPartition(loan_data$Loan_Status, p=0.75, list = FALSE)
-
-training <- loan_data[partition,]
-testing <- loan_data[-partition,]
-
+partition <- createDataPartition(adhd_data$Suicide, p=0.75, list = FALSE)
+training <- adhd_data[partition,]
+testing <- adhd_data[-partition,]
 # training/validation partition for independent variables
 #X.train <- ld.clean[partition, ] %>% dplyr::select(-Loan_Status)
 #X.test <- ld.clean[-partition, ] %>% dplyr::select(-Loan_Status)
-
 # training/validation partition for dependent variable Loan_Status
 #y.train <- ld.clean$Loan_Status[partition]
 #y.test <- ld.clean$Loan_Status[-partition]
 ```
 
+# Clustering Models
+## K-means
+## Hierarchical
+
+# Principal Component Analysis
+## Individual Substance Misuse
+
+# Gradient Boosting: Suicide
+
+# Support Vector
 
 # Build Models
 
