@@ -3,9 +3,6 @@ title: "Data622 - Group2 - Homework4"
 author: "Zachary Palmore, Kevin Potter, Amit Kapoor, Adam Gersowitz, Paul Perez"
 date: "10/21/2021"
 output:
-  pdf_document:
-    latex_engine: xelatex
-    toc: yes
   html_document:
     fig_width: 15
     highlight: pygments
@@ -13,6 +10,9 @@ output:
     theme: flatly
     toc: yes
     toc_float: yes
+  pdf_document:
+    latex_engine: xelatex
+    toc: yes
 ---
 
 
@@ -43,6 +43,7 @@ library(corrplot)
 library(kableExtra)
 library(htmltools)
 library(readxl)
+library(psych)
 
 set.seed(622)
 
@@ -50,6 +51,25 @@ set.seed(622)
 ```
 
 # Data Exploration
+
+Columns | Variable | Description  
+---|---|-----  
+C |  Sex | Male-1, Female-2  
+D | Race | White-1, African American-2, Hispanic-3, Asian-4, Native American-5, Other or missing data -6  
+E - W | ADHD self-report scale |  Never-0, rarely-1, sometimes-2, often-3, very often-4  
+X - AM | Mood disorder questions |  No-0, yes-1; question 3: no problem-0, minor-1, moderate-2, serious-3  
+AN - AS | Individual substances misuse |   no use-0, use-1, abuse-2, dependence-3   
+AT | Court Order |   No-0, Yes-1  
+AU | Education |  1-12 grade, 13+ college  
+AV | History of Violence |  No-0, Yes-1  
+AW | Disorderly Conduct |  No-0, Yes-1  
+AX | Suicide attempt |  No-0, Yes-1  
+AY | Abuse Hx |  No-0, Physical (P)-1, Sexual (S)-2, Emotional (E)-3, P&S-4, P&E-5, S&E-6, P&S&E-7  
+AZ | Non-substance-related Dx |  0 - none; 1 - one; 2 - More than one  
+BA | Substance-related Dx |  0 - none; 1 - one Substance-related; 2 - two; 3 - three or more  
+BB | Psychiatric Meds |  0 - none; 1 - one psychotropic med; 2 - more than one psychotropic med  
+
+
 ## Data Characteristics
 
 
@@ -61,6 +81,14 @@ adhd_data <- read_excel("ADHD_data.xlsx", sheet = "Data") %>% na_if("") %>% dply
 adhd_data[,2:53] <- lapply(adhd_data[,2:53], factor)
 ```
 
+
+```{r}
+dim(adhd_data)
+```
+
+```{r}
+adhd_data[,c(23:37)]
+```
 
 
 ```{r, cat-bar, fig.length =20, fig.width=10}
@@ -83,15 +111,122 @@ ggplot(adhd_factm, aes(x = value)) +
 dfSummary(adhd_data, style = 'grid', graph.col = FALSE)
 ```
 
+## Coorelation
+
+Next we will see the correlation among ADHD questions and MD questions. As we can deduce from below 2 correlation plots, ADHD questions are highly correlated and MD questions comparatively shows moderate correlation.
+
+```{r corr-adhds}
+adhds <- sapply(adhd_data[,c(4:21)], as.numeric) %>% cor()
+corrplot::corrplot(adhds, method="number")
+```
+
+```{r corr-mds}
+mds <- sapply(adhd_data[,c(23:37)], as.numeric) %>% cor()
+corrplot::corrplot(mds, method="number")
+```
+
 
 
 # Data Preparation
 
+## Factor Analysis
+
+Like PCA, Factor Analysis too, reduces larger number of variables into smaller number of variables, called latent variables.It is used to identify underlying factors that explain the correlation among set of variables. Factor analysis is a great tool for treating multivariate questionnaire studies.
+
+For ADHD questions, test of the hypothesis that 3 factors are sufficient. The chi square statistic is 197.3 on 102 degrees of freedom. The p-value is 0.0000000476. We have used regression factor scores here as they predict the location of each individual on the factor.
+
+
+
+```{r adhd-ques-fa}
+adhd_ques_fa <- factanal(sapply(adhd_data[,c(4:21)], as.numeric), 
+                         factors = 3, 
+                         rotation = "promax", 
+                         scores = "regression")
+adhd_ques_fa
+```
+
+
+
+```{r adhd-fa-diag}
+fa.diagram(adhd_ques_fa$loadings)
+```
+
+
+For MD questions we could see that 1st MD question has multiple sub questions as compared to 2nd and 3rd question. Now for these set of MD questions too, we will apply similar factor analysis as of ADHD questions. Test of the hypothesis that 3 factors are sufficient. The chi square statistic is 88.82 on 63 degrees of freedom. The p-value is 0.0178.
+
+
+
+```{r md-ques-fa}
+md_ques_fa <- factanal(sapply(adhd_data[,c(23:37)], as.numeric), 
+                         factors = 3, 
+                         rotation = "promax", 
+                         scores = "regression")
+md_ques_fa
+```
+
+
+
+```{r mdfa-diag}
+fa.diagram(md_ques_fa$loadings)
+```
+
+In the next step we will remove all ADHD Question columns, ADHD Total, MD questions columns and MD TOTAL columns. Then we will add the new factors found above for ADHD and MD questions.
+
+
+```{r}
+# ADHD question scores dataframe
+adhd_ques_fa <- as.data.frame(adhd_ques_fa$scores) 
+names(adhd_ques_fa) <- c('ADHD_FACT1','ADHD_FACT2','ADHD_FACT3')
+
+# MD questions scores dataframe
+md_ques_fa <- as.data.frame(md_ques_fa$scores)
+names(md_ques_fa) <- c('MD_FACT1','MD_FACT2','MD_FACT3')
+
+# remove ADHD and MD columns
+adhd_newdata <- adhd_data %>% dplyr::select(-c(starts_with('ADHD'), starts_with('MD')))
+
+# Add new factor columns created
+adhd_newdata <- cbind(adhd_newdata, adhd_ques_fa, md_ques_fa)
+```
+
+Here is glimpse of new set of data.
+
+```{r}
+head(adhd_newdata)
+```
+
+
+
+
 ## Handling missing values
+
 
 ```{r}
 # plot missing values
-plot_missing(adhd_data)
+plot_missing(adhd_newdata)
+```
+
+We can see from this chart that `Psych meds.` contributes to 67.43% of missing data which is maximum among all missing data in other columns. We will remove this column before imputation. We then impute values using MICE (Multivariate Imputation by Chained Equations).
+
+```{r}
+# rename columns to apply mice
+adhd_newdata <- adhd_newdata %>% 
+  rename('Sedative_hypnotics'='Sedative-hypnotics', 
+         'Court_order' = 'Court order', 
+         'Hx_of_Violence'='Hx of Violence', 
+         'Disorderly_Conduct'='Disorderly Conduct', 
+         'Non_subst_Dx'='Non-subst Dx',
+         'Subst_Dx'='Subst Dx', 
+         'Psych_meds'='Psych meds.') %>% 
+  dplyr::select(-Psych_meds)
+```
+
+Here is the summary after imputation.
+
+```{r impute}
+# impute predictors using mice
+adhd_mice <- complete(mice(data=adhd_newdata, print=FALSE))
+summary(adhd_mice)
 ```
 
 
@@ -123,16 +258,17 @@ plot_missing(adhd_data)
 ```
 
 
-```{r}
-dim(adhd_data)
-```
 
 
 ## Preprocess using transformation
 
 
-```{r transform-train}
-
+```{r transform}
+set.seed(622)
+adhd_transform <- adhd_mice %>% 
+  dplyr::select(c("Age","ADHD_FACT1","ADHD_FACT2","ADHD_FACT3",,"MD_FACT1","MD_FACT2","MD_FACT3")) %>%
+  preProcess(method = c("center","scale")) %>% 
+  predict(adhd_mice)
 ```
 
 
@@ -240,6 +376,9 @@ Our KNN model accuracy comes out to `r round(conf.mat.knn$overall[[1]], 3)*100`%
 
 # References
 
+https://towardsdatascience.com/what-is-the-difference-between-pca-and-factor-analysis-5362ef6fa6f9
+
+https://scholarworks.umass.edu/cgi/viewcontent.cgi?article=1226&context=pare
 
 # Code Appendix
 
