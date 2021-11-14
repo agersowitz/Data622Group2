@@ -183,7 +183,7 @@ md_ques_fa <- as.data.frame(md_ques_fa$scores)
 names(md_ques_fa) <- c('MD_FACT1','MD_FACT2','MD_FACT3')
 
 # remove ADHD and MD columns
-adhd_newdata <- adhd_data %>% dplyr::select(-c(starts_with('ADHD'), starts_with('MD')))
+adhd_newdata <- adhd_data %>% dplyr::select(-c(starts_with('ADHD Q'), starts_with('MD Q')))
 
 # Add new factor columns created
 adhd_newdata <- cbind(adhd_newdata, adhd_ques_fa, md_ques_fa)
@@ -206,12 +206,14 @@ head(adhd_newdata)
 plot_missing(adhd_newdata)
 ```
 
-We can see from this chart that `Psych meds.` contributes to 67.43% of missing data which is maximum among all missing data in other columns. We will remove this column before imputation. We then impute values using MICE (Multivariate Imputation by Chained Equations).
+We can see from this chart that `Psych meds.` contributes to 67.43% of missing data which is maximum among all missing data in other columns. We will remove this column before imputation. We then impute values using MICE (Multivariate Imputation by Chained Equations) for columns having missing values.
 
 ```{r}
 # rename columns to apply mice
 adhd_newdata <- adhd_newdata %>% 
-  rename('Sedative_hypnotics'='Sedative-hypnotics', 
+  rename('ADHD_Total'='ADHD Total',
+         'MD_Total'='MD TOTAL',
+         'Sedative_hypnotics'='Sedative-hypnotics', 
          'Court_order' = 'Court order', 
          'Hx_of_Violence'='Hx of Violence', 
          'Disorderly_Conduct'='Disorderly Conduct', 
@@ -221,12 +223,24 @@ adhd_newdata <- adhd_newdata %>%
   dplyr::select(-Psych_meds)
 ```
 
-Here is the summary after imputation.
+
 
 ```{r impute}
+# select columns with non missing values
+temp <- adhd_newdata %>% dplyr::select(c(starts_with('ADHD_'), starts_with('MD_'), 'Race', 'Sex', 'Age'))
+
 # impute predictors using mice
-adhd_mice <- complete(mice(data=adhd_newdata, print=FALSE))
-summary(adhd_mice)
+adhd_impute <- adhd_newdata %>% dplyr::select(-c(starts_with('ADHD_'), starts_with('MD_'), 'Race', 'Sex', 'Age'))
+adhd_impute <- complete(mice(data=adhd_impute, print=FALSE))
+summary(adhd_impute)
+```
+
+
+
+```{r}
+# Merged the imputed dataframe with temp
+adhd_newdata <- cbind(adhd_impute, temp)
+head(adhd_newdata)
 ```
 
 
