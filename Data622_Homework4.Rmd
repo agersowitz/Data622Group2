@@ -324,11 +324,7 @@ testing <- adhd_data[-partition,]
 
 # Gradient Boosting: Suicide
 
-# Support Vector
-
 # Build Models
-
-## Linear Discriminant Analysis (LDA)
 
 ## Clustering Method
 
@@ -387,10 +383,36 @@ conf.mat.knn
 Our KNN model accuracy comes out to `r round(conf.mat.knn$overall[[1]], 3)*100`%
 
 
-## Decision Trees
+## Support Vector Machine
 
 
-## Random Forests
+```{r}
+
+partition <- createDataPartition(adhd_transformed$Suicide, p=0.75, list = FALSE)
+training <- adhd_transformed[partition,]
+testing <- adhd_transformed[-partition,]
+```
+
+
+```{r}
+set.seed(622)
+svm_rad_fit <- train(Suicide ~ ., 
+                data = training, 
+                method = "svmRadial",
+                preProcess = c("center","scale"),
+                tuneLength = 5,
+                trControl = trainControl(method = "cv"))
+
+svm_rad_fit
+```
+
+
+```{r}
+pred_suicide <- predict(svm_rad_fit, testing)
+confusionMatrix(testing$Suicide, pred_suicide)
+```
+
+
 
 
 # Model Performance
