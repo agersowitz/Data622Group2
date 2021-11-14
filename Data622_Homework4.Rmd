@@ -276,13 +276,25 @@ head(adhd_newdata)
 
 ## Preprocess using transformation
 
+In this transformation, we would first use dummyVars to create dummy variables for categorical features. Next we use center and scaling transformation.
 
 ```{r transform}
 set.seed(622)
-adhd_transform <- adhd_mice %>% 
-  dplyr::select(c("Age","ADHD_FACT1","ADHD_FACT2","ADHD_FACT3",,"MD_FACT1","MD_FACT2","MD_FACT3")) %>%
-  preProcess(method = c("center","scale")) %>% 
-  predict(adhd_mice)
+
+# create dummy variables for categorical features
+adhd_dummy <- dummyVars(Suicide ~ ., data = adhd_newdata) 
+adhd_dummy <- predict(adhd_dummy, newdata=adhd_newdata)
+
+# center and scaling
+adhd_transformed <- adhd_dummy %>% 
+  preProcess(c("center", "scale")) %>% 
+  predict(adhd_dummy) %>% 
+  as.data.frame()
+
+# add Suicide column
+adhd_transformed$Suicide <- adhd_newdata$Suicide
+
+head(adhd_transformed)
 ```
 
 
