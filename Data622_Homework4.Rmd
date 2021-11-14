@@ -29,7 +29,6 @@ We will first perform exploratory data analysis on dataset to later inform our m
 
 ```{r libraries, include=FALSE, warning=FALSE, message=FALSE}
 # Libraries
-
 library(summarytools)
 library(tidyverse)
 library(DataExplorer)
@@ -44,9 +43,8 @@ library(kableExtra)
 library(htmltools)
 library(readxl)
 library(psych)
-
-set.seed(622)
-
+library(xgboost)
+library(ParBayesianOptimization)
 set.seed(622)
 ```
 
@@ -324,6 +322,85 @@ testing <- adhd_data[-partition,]
 
 # Gradient Boosting: Suicide
 
+Assume you are modeling whether a patient attempted suicide (column AX). This is a binary
+target variable. Please use Gradient Boosting to predict whether a patient attempts suicides.
+Please use whatever boosting approach you deem appropriate. But please be sure to walk us
+through your steps.
+
+We remove the rows null values in the target column and drop the Non-subset Dx column because it had a lot of nulls as well. XGBoost needs data to be in a matrix so we convert the dataframes to numeric matricies. 
+
+```{r}
+gb__train <-subset(training[complete.cases(training$Suicide), ], select= -`Non-subst Dx`)
+gb__test <-subset(testing[complete.cases(testing$Suicide), ], select= -`Non-subst Dx`)
+y_label_tr <- as.matrix(gb__train$Suicide)
+y_label_test <- as.matrix(gb__test$Suicide)
+gb__train <- sapply(subset(gb__train, select = -Suicide), as.numeric)
+gb_test <- sapply(subset(gb__test, select = -Suicide), as.numeric)
+```
+
+
+## CV Split
+
+We split the data into three folds for cross validation to imrove the ability of the model to generailze and helpwit h overfitting. We create a function to help with parameter tunning and make use of the bayesOpt package.  
+
+https://cran.r-project.org/web/packages/ParBayesianOptimization/vignettes/tuningHyperparameters.html
+
+```{r}
+Folds <- list(
+    Fold1 = as.integer(seq(1,nrow(gb__train),by = 3))
+  , Fold2 = as.integer(seq(2,nrow(gb__train),by = 3))
+  , Fold3 = as.integer(seq(3,nrow(gb__train),by = 3))
+)
+
+scoringFunction <- function(max_depth, min_child_weight, subsample) {
+  dtrain <- xgb.DMatrix(gb__train, label=y_label_tr)
+  Pars <- list( 
+      booster = "gbtree"
+    , eta = 0.01
+    , max_depth = max_depth
+    , min_child_weight = min_child_weight
+    , subsample = subsample
+    , objective = "binary:logistic"
+    , eval_metric = "auc"
+  )
+  xgbcv <- xgb.cv(
+      params = Pars
+    , data = dtrain
+    , nround = 100
+    , folds = Folds
+    , prediction = TRUE
+    , showsd = TRUE
+    , early_stopping_rounds = 5
+    , maximize = TRUE
+            , verbose = 0)
+  return(
+    list( 
+        Score = max(xgbcv$evaluation_log$test_auc_mean)
+      , nrounds = xgbcv$best_iteration
+    )
+  )
+}
+
+```
+```{r}
+set.seed(50)
+bounds <- list( 
+    max_depth = c(2L, 10L)
+  , min_child_weight = c(1, 25)
+  , subsample = c(0.25, .5)
+)
+
+optObj <- bayesOpt(
+    FUN = scoringFunction
+  , bounds = bounds
+  , initPoints = 4
+  , iters.n = 3
+)
+optObj$scoreSummary
+print(getBestPars(optObj))
+```
+
+
 # Build Models
 
 ## Clustering Method
@@ -442,6 +519,33 @@ svm_resamps <- resamples(list(Linear = svm_lin_fit, Radial = svm_rad_fit, Poly =
 summary(svm_resamps)
 ```
 
+
+## Gradient Boosted 
+
+We use the information from the above function to fit our final model, make preidctions, and evalute results.
+```{r}
+dtrain <- xgb.DMatrix(gb__train, label=y_label_tr)
+dtest <- xgb.DMatrix(gb_test, label=y_label_test)
+xgb <- xgb.train(
+      params = list( 
+                  booster = "gbtree"
+                , eta = 0.01
+                , max_depth = 10
+                , min_child_weight = 1
+                , subsample = .5
+                , objective = "binary:logistic"
+                , eval_metric = "auc"
+              )
+    , data = dtrain
+    , nround = 100
+    , maximize = TRUE
+            , verbose = 0)
+
+xgbpred <- predict(xgb,dtest)
+xgbpred <- ifelse (xgbpred > 0.5,1,0)
+y_label_test <- as.numeric(y_label_test)
+confusionMatrix(table(xgbpred, y_label_test))
+```
 
 
 # Model Performance
