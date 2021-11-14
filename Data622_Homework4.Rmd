@@ -76,20 +76,19 @@ Notice how the data is grouped with ADHD, Mood disorders, and Individual Substan
 
 ## Data Characteristics
 
-The data 
-
 ```{r data}
 # read data
 adhd_data <- read_excel("ADHD_data.xlsx", sheet = "Data") %>% na_if("") %>% dplyr::select(-1)
 #columns <- list(dimnames(adhd_data)[2])
 #df <- adhd_data[,2:53]
 adhd_data[,2:53] <- lapply(adhd_data[,2:53], factor)
+adhd_data.dims <- dim(adhd_data)
+adhd_data.dims[[2]]
 ```
 
+The data contains `r adhd_data.dims[[1]]` observations of `r adhd_data.dims[[2]]` variables. We import the data from a remote repository and find that 51 of the variables should be of the factor data type given clear levels in their distributions. As is, these variables are interpreted as character strings. This will need to be converted for realistic results. The remaining variables can be numeric for our purposes. 
 
-```{r}
-dim(adhd_data)
-```
+We review one grouped variable set, known as mood disorders (MD), to show what we're working with. These contain a series of associated questions (Q1-Q3) with Q1 containing parts 'a' through 'm.'
 
 ```{r}
 adhd_data[,c(23:37)]
