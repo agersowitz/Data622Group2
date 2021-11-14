@@ -22,10 +22,13 @@ knitr::opts_chunk$set(echo=FALSE, error=FALSE, warning=FALSE, message=FALSE, fig
 
 
 # Overview
-In this project, we will analyze a real-life mental health dataset to provide context around suicide prediction given the variety of unidentifiable demographic data.
+
+In this project, we analyze a real-life mental health dataset to provide context around suicide prediction given a variety of unidentifiable demographic data. Our goals are to understand the variables relationships, identify those variables that influence our target, and develop models that can predict a patient's risk of suicide. 
 
 # Approach
-We will first perform exploratory data analysis on dataset to later inform our modeling approaches for Clustering, Principal Compnent Analysis, Gradient Boosting, and Support Vector Machines.
+We will first perform exploratory data analysis (EDA) on the dataset to inform our analysis and build better models. Methods include Clustering, Principal Component Analysis, Gradient Boosting, and Support Vector Machines. This EDA step is crucial to understanding variables' relationships and identifying which variables influence our target. 
+
+Once we understand the data, we prepare it for modeling. This includes partitioning the data with a 75-25 train-test split, performing necessary imputations, relevant centering and scaling, and more as outlined in our data exploration and preparation sections. When building our models we focus on using methods that produce real-world accuracy. For this reason, we attempt to select the best generalizable model with accuracy as our primary indicator during model evaluation.  
 
 ```{r libraries, include=FALSE, warning=FALSE, message=FALSE}
 # Libraries
@@ -50,6 +53,8 @@ set.seed(622)
 
 # Data Exploration
 
+The dataset with its column IDs, variable names, and variables descriptions are provided below for reference.
+
 Columns | Variable | Description  
 ---|---|-----  
 C |  Sex | Male-1, Female-2  
@@ -67,9 +72,11 @@ AZ | Non-substance-related Dx |  0 - none; 1 - one; 2 - More than one
 BA | Substance-related Dx |  0 - none; 1 - one Substance-related; 2 - two; 3 - three or more  
 BB | Psychiatric Meds |  0 - none; 1 - one psychotropic med; 2 - more than one psychotropic med  
 
+Notice how the data is grouped with ADHD, Mood disorders, and Individual Substance misuse present across a range of columns. These groups are reviewed throughout the exploration process and new features are generated to attempt to improve model performance. 
 
 ## Data Characteristics
 
+The data 
 
 ```{r data}
 # read data
