@@ -326,6 +326,81 @@ testing <- adhd_data[-partition,]
 # Principal Component Analysis
 ## Individual Substance Misuse
 
+Principal Compenent Analysis (PCA) is one way for which we can rudce the dimensionality of a data set which would help increase the interpretability of the data while minimizing information loss. We're going to perform PCA for the 3 groups below while using scree plots to determine the numberof PCA's to keep. The Scree plot will display the eigenvalues in a downward curve, and order them from largest to smallest.
+
+Groups: 
+- All ADHD Questions
+- All MD Questions
+- All Remaining Features
+
+```{r}
+# create subset of ADHD Questions for PCA
+adhd_ques_pca <- sapply(adhd_data[,c(4:21)], as.numeric)
+
+# create subset of MD Questions for PCA
+md_ques_pca <- sapply(adhd_data[,c(23:37)], as.numeric)
+
+# create dataset of remaining features for PCA
+rf_ques_pca <- sapply(adhd_data[,c(39:53)], as.numeric)
+```
+
+
+### ADHD
+```{r}
+pca_adhd <- prcomp(adhd_ques_pca, scale. = TRUE)
+summary(pca_adhd)
+```
+
+
+```{r}
+plot(pca_adhd, type = 'l', col = 'blue')
+```
+
+```{r}
+biplot(pca_adhd, choices = c(1,2), scale = 0)
+```
+
+```{r}
+biplot(pca_adhd, choices = c(2,3), scale = 0)
+```
+
+```{r}
+biplot(pca_adhd, choices = c(1,3), scale = 0)
+```
+
+
+### MD
+
+```{r}
+pca_md <- prcomp(md_ques_pca, scale. = TRUE)
+summary(pca_md)
+```
+
+```{r}
+plot(pca_md, type = 'l', col = 'dark green')
+```
+
+```{r}
+biplot(pca_md, choices = c(1,2), scale = 0)
+```
+
+```{r}
+biplot(pca_md, choices = c(2,3), scale = 0)
+```
+
+```{r}
+biplot(pca_md, choices = c(1,3), scale = 0)
+```
+
+
+### Remaining Features
+
+```{r}
+#pca_rf <- prcomp(rf_ques_pca, scale. = TRUE)
+#summary(pca_rf)
+```
+
+
 # Gradient Boosting: Suicide
 
 Assume you are modeling whether a patient attempted suicide (column AX). This is a binary
