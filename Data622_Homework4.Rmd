@@ -93,7 +93,7 @@ We review one grouped variable set, known as mood disorders (MD), to show what w
 ```{r}
 adhd_data[,c(23:37)]
 ```
-
+Each part of Q1 'a' through 'm' corresponds with a specific question related to mood disorders for a single patient. In our feature engineering, it may be useful to tally these responses for a more holistic perspective of the patient's overall mood. We repeat this for the other groups to get an sense of the patient well-being which should provide insight into their risk of suicide.   
 
 ```{r, cat-bar, fig.length =20, fig.width=10}
 # select categorical columns
