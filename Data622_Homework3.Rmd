@@ -1,6 +1,6 @@
 ---
 title: "Data622 - Group2 - Homework3"
-author: "Zachary Palmore, Kevin Potter, Amit Kapoor, Adam Gersowitz"
+author: "Zachary Palmore, Kevin Potter, Amit Kapoor, Adam Gersowitz, Paul Perez"
 date: "10/2/2021"
 output:
   pdf_document:
@@ -13,6 +13,7 @@ output:
     theme: flatly
     toc: yes
     toc_float: yes
+  always_allow_html: yes
 ---
 
 
@@ -22,10 +23,16 @@ knitr::opts_chunk$set(echo=FALSE, error=FALSE, warning=FALSE, message=FALSE, fig
 
 
 # Overview
-In this project, the dataset used, is for Loan approval where the prediction will be done for Loan approval status using Linear Discriminant Analysis (LDA), K-nearest neighbor (KNN), Decision Trees and Random Forest models.
+In this project we will develop models that allow us to predict whether a loan is approved given certain indicators. Models will include linear discriminant analysis, K-nearest neighbor, decision trees, and random forest algorithms and we will assess which performs best at predicting loan approval status through performance statistics. 
 
-# R packages
-We will use `r` for data modeling. All packages used for data exploration, visualization, preparation and modeling are listed in Code Appendix.
+
+# Approach
+For this project, we begin with data exploration to understand the relationships our target variable ‘Loan_Status’ will have with our variables and the variables’ relationships to each other.  This allows us to determine the steps necessary to set up for model development. Once we have an understanding of these variables we use that knowledge to prepare the data. We handle missing values, subset, train and split the data 75/25 so that we may better extract information when modeling. Then, we build the models and predict with the testing dataset. 
+We focus on prediction accuracy when assessing the models but consider a host of performance statistics and real-world applications to determine which model is best. 
+
+
+We will use ‘r’ for data modeling. All packages used for data exploration, visualization, preparation and modeling are listed in Code Appendix. 
+
 
 ```{r libraries, include=FALSE, warning=FALSE, message=FALSE}
 # Libraries
@@ -42,12 +49,16 @@ library(caret)
 library(tree)
 library(randomForest)
 library(corrplot)
+library(kableExtra)
+library(htmltools)
 
 set.seed(622)
 ```
 
 # Data Exploration
-Below is the description of the variables of interest in the data set.
+## Data Characteristics
+There are 614 observations of 12 variables. Each observation is an applicant’s application for a loan with its corresponding variables of interest. Below is the description of the variables of interest in the data set. 
+
 
 |VARIABLE NAME|DESCRIPTION|
 |--|----|
@@ -64,6 +75,9 @@ Below is the description of the variables of interest in the data set.
 |Credit_History|credit history meets guidelines|
 |Property_Area|Urban/ Semi Urban/ Rural|
 |Loan_Status|Loan approved (Y/N)|
+
+
+There are four numeric variables represented by loan amount, loan amount term, applicant and co-applicant income. Several of these variables appear to be factors with specific levels but are not coded as such. For example, Gender, Married, Dependents, Education, Self_Employed, Property_Area, Credit_History, and Loan_Status are character strings. We will need to fix this if we are to make use of them. 
 
 
 ```{r data}
@@ -87,20 +101,24 @@ loan_data <- loan_data %>%
 
 
 ## Data summary
+Below is a summary of the loan approval dataset. For this process we have already adjusted the data types to their proper forms. This summarizing function quantifies each variable in a manner consistent with their types. We notice the levels of each factor in the ‘Stats/Values’ column, the frequency of valid (non-missing) observations per level of our factors, and the quantity and percent missing alongside them. We review these statistics to identify any issues with each variable.
 
-Below is summary of loan approval dataset.
 
 ```{r loan_data_summary}
 dfSummary(loan_data, style = 'grid', graph.col = FALSE)
 ```
 
 
-* There are 7 columns having missing values.
-* The proportion of values for few columns shows significant differences i.e. Gender (more males), Married( more married), Credit_History (more having credit history).
+There are 7 columns that have missing values. The proportion of values for several columns shows significant differences and skew. For example, 97.9% of this dataset contains males applicants based on observations of the Gender variable, 99.5% of applicants are married people given the Married variable, and over 90% of our observations have longer Credit_History. Due to the disproportionate levels within the variables we should expect the data is not representative of a larger population unless that population happens to have similar proportions. 
 
+Our numeric incomes variables show significant signs of skew through the differences in their mean and medians as well as their ranges. The lowest applicant income was 150, while the highest was 81000. A similar problem exists with our co-applicant income data having had individuals with 0 income on the lowest end of the range and 41667 on the highest. 
 
+However, all of the observations contained an applicant and co-applicant income. Since some applicants may not have used a co-applicant on their applications, part of this skew could be caused by the data collection process. Additionally, we are only missing 3.6% of the observations of loan amount and 2.3% for loan terms. 
 
-Below graphs shows the distribution of all categorical variables.
+There are regular intervals and commonality in the loan term amounts which indicates we may have been able to factorize their data types. We chose instead to leave it as a discrete numeric value since it represents the term length which could be any number of days or months. We note that 85.3% percent of these applicants applied for a loan term of 360 but we are unsure if that is due to the lending institutions standard practice or if applicants requested this specific term. 
+
+For exploratory purposes, we visualize the proportions to see just how skewed and disproportionate this dataset is. We include missing values to demonstrate their influence on the dataset as well. The chart below shows the distribution of all categorical variables, which includes the factors mentioned previously. 
+
 
 ```{r, cat-bar, fig.length =20, fig.width=10}
 
@@ -120,102 +138,113 @@ loan_factm <- melt(loan_fact, measure.vars = cat_cols, variable.name = 'metric',
 
 # plot categorical columns
 ggplot(loan_factm, aes(x = value)) + 
-  geom_bar() + 
-  scale_fill_brewer(palette = "Set1") + 
-  facet_wrap( ~ metric, nrow = 5L, scales = 'free') + coord_flip()
+  geom_bar(aes(fill = metric)) + 
+  facet_wrap( ~ metric, nrow = 5L, scales = 'free') + coord_flip() + 
+  theme(legend.position = "none")
 ```
 
 
-Below graph shows the distribution of numeric predictors.
+From this chart, it is very clear we have a dataset with mostly married male graduates with no dependents, a long credit history, and who are not self-employed. There is a relatively even mix of urban, suburban, and rural applicants and a small number of missing values. Applicants tend to be accepted more often than not and there are no missing observations for our target variable ‘Loan_Status’ nor the applicant's property area or education. These are all of our categorical variables. 
+
+We also generate histograms with the count of each observation to assess our numeric variable distributions. This will let us know more about the skewness, average values, and where potential outliers may be found for our numeric variables. The graph below shows their distributions.
+
 
 ```{r plot_num}
 plot_histogram(loan_data, geom_histogram_args = list("fill" = "tomato4"))
 ```
 
-Next we will cover impact of categorical variables on loan approval.
+The applicant income and co-applicant income variables are highly right skewed with a smaller number of individual applicants stretching the distribution towards higher incomes. For analysis purposes, we must keep in mind that only a handful of applicants had higher incomes while the bulk of applicants were concentrated at the lower end of the income distribution. The loan amount term has one spike at 360. Meanwhile, the loan amount distribution is the closest to normal. These results are consistent with our summary table. 
 
-```{r}
+Next we will review the impact of the categorical variables’ proportions on loan approval in more detail by isolating the factor levels individually. Here again, we visualize the proportions as a bar chart without missing values and expand the size of the chart to see the nuances of each. These are placed alongside each variable's frequency table by level to visualize their proportions. The results are as follows:
+
+```{r ch-loanstatus}
 loan_ch <- with(loan_data, table(Credit_History, Loan_Status)) %>% 
   prop.table(margin = 1) %>% as.data.frame() %>% filter(Loan_Status == 'Y')
 
 loan_ch
 ```
 
-```{r}
+```{r ch-ls-plot}
 ggplot(loan_ch, aes(x=Credit_History, y=Freq, fill=Credit_History)) + geom_bar(stat='identity') + labs(title = 'Approved Loans by Credit History', y = "Percentage", x = "Credit History")
 ```
 
-```{r}
+```{r gen-loanstatus}
 loan_gen <- with(loan_data, table(Gender, Loan_Status)) %>% 
   prop.table(margin = 1) %>% as.data.frame() %>% filter(Loan_Status == 'Y')
 
 loan_gen
 ```
 
-```{r}
+```{r gen-ls-plot}
 ggplot(loan_gen, aes(x=Gender, y=Freq, fill=Gender)) + geom_bar(stat='identity') + labs(title = 'Approved Loans by Gender', y = "Percentage", x = "Gender")
 ```
 
-```{r}
+```{r edu-loanstatus}
 loan_ed <- with(loan_data, table(Education, Loan_Status)) %>% 
   prop.table(margin = 1) %>% as.data.frame() %>% filter(Loan_Status == 'Y')
 
 loan_ed
 ```
 
-```{r}
+```{r ed-ls-plot}
 ggplot(loan_ed, aes(x=Education, y=Freq, fill=Education)) + geom_bar(stat='identity') + labs(title = 'Approved Loans by Education', y = "Percentage", x = "Education")
 ```
 
 
-```{r}
+```{r mar-loanstatus}
 loan_mar <- with(loan_data, table(Married, Loan_Status)) %>% 
   prop.table(margin = 1) %>% as.data.frame() %>% filter(Loan_Status == 'Y')
 
 loan_mar
 ```
 
-```{r}
+```{r mar-ls-plot}
 ggplot(loan_mar, aes(x=Married, y=Freq, fill=Married)) + geom_bar(stat='identity') + labs(title = 'Approved Loans by Married', y = "Percentage", x = "Married")
 ```
 
 
-```{r}
+```{r dep-loanstatus}
 loan_dep <- with(loan_data, table(Dependents, Loan_Status)) %>% 
   prop.table(margin = 1) %>% as.data.frame() %>% filter(Loan_Status == 'Y')
 
 loan_dep
 ```
 
-```{r}
+```{r dep-ls-plot}
 ggplot(loan_dep, aes(x=Dependents, y=Freq, fill=Dependents)) + geom_bar(stat='identity') + labs(title = 'Approved Loans by Dependents', y = "Percentage", x = "Dependents")
 ```
 
-```{r}
 
-G = cor(loan_data[6:(length(loan_data)-3)])
-corrplot(G, method = 'number') # colorful number
+These bar charts confirm our thoughts about the dataset’s disproportionalities. Missing values have little effect on the overall proportions and so they can be removed. It remains male dominated with applicants who are married, have no dependents, are highly educated, and have a long credit history.
+
+## Correlations
+To determine how well each variable is correlated with our target variable and with one another, we construct a correlation plot. This plot contains the values of all correlation between variables represented by colors and numbers. The lighter the color, the lower the correlation. Meanwhile, darker blue indicates stronger positive correlations while darker red indicates stronger negative correlations.
+
+
+```{r corr}
+cors <- loan_data %>% 
+  select_if(is.numeric) %>% 
+  na.omit() %>%
+  cor()
+corrplot::corrplot(cors, method="number")
+# G = cor(loan_data[6:(length(loan_data)-3)])
+# corrplot(G, method = 'number') # colorful number
 ```
 
-The numeric features do not seem to be strongly correlated with another so that is a factor that does not have to be dealt with.
 
-```{r}
-G = cor(loan_data[6:(length(loan_data)-3)])
-corrplot(G, method = 'number') # colorful number
-```
-
+Given that our numeric features have correlation values near 0, they do not seem to be strongly correlated with our target. They also do not seem to have any correlation with one another so this is a factor that does not have to be dealt with. 
 
 
 # Data Preparation
 
 ## Handling missing values
 
-```{r}
+```{r miss-plot}
 # plot missing values
 plot_missing(loan_data)
 ```
 
-We can see above credit_history contributes to 8% of missing data along with self_employed that accounts for more than 5% of missing data. All records having missing categorical predictors will be removed. Next we will impute numeric values using MICE (Multivariate Imputation by Chained Equations).
+We can see from this chart that credit_history contributes to 8.14% of missing data, self_employed accounts for more than 5% of missing data and so on. All records having missing categorical predictors must be removed. We perform this removal by filtering the variables to their complete cases. We then impute numeric values using MICE (Multivariate Imputation by Chained Equations).
 
 ```{r cat-missing}
 # Filter out the data which has missing categorical predictors
@@ -234,16 +263,17 @@ loan_data <- complete(mice(data=loan_data, method="pmm", print=FALSE))
 ```
 
 
-```{r}
+```{r dim-loan}
 dim(loan_data)
 ```
 
-Finally our clean dataset contains 511 rows and 12 columns.
+Our final, missing value cleaned dataset contains 511 rows and 12 columns. This reduces the observation size by the amount of missing values present in each variable because those missing were imputed or filtered out. 
 
 
 ## Preprocess using transformation
 
-We have seen above that numeric features are right skewed so in this step we will use caret `preprocess` method using box cox, center and scale transformation.
+Due to the right skew in the numeric features, we adjust the distribution to center, scale, and transform the data to reduce bias. This preprocessing uses the caret package's 'preprocessing' function to return a box cox transformation on all numeric variables in our loan dataset. These numeric variables include the applicant and coapplicant income, the loan amount, and loan amount term. We process further with a center scaling of the values to place them all within the same grid axes. This will provide greater clarity to understand linearity and separability before modeling. 
+
 
 ```{r transform-train}
 # library(e1071) - where this was used
@@ -266,13 +296,6 @@ partition <- createDataPartition(loan_data$Loan_Status, p=0.75, list = FALSE)
 training <- loan_data[partition,]
 testing <- loan_data[-partition,]
 
-# training/validation partition for independent variables
-#X.train <- ld.clean[partition, ] %>% dplyr::select(-Loan_Status)
-#X.test <- ld.clean[-partition, ] %>% dplyr::select(-Loan_Status)
-
-# training/validation partition for dependent variable Loan_Status
-#y.train <- ld.clean$Loan_Status[partition]
-#y.test <- ld.clean$Loan_Status[-partition]
 ```
 
 
@@ -280,11 +303,33 @@ testing <- loan_data[-partition,]
 
 ## Linear Discriminant Analysis (LDA)
 
-```{r lda}
+Linear Discriminant analysis is when the dependent variable has two categories and the LDA function that passes through the means of the two categories can be used to discriminate between the two categories. LDA projects the data on a new axis to maximize the separation between two categories. Linear Discriminant Analysis is similar to PCA but its focus is more towards maximizing the separability among known categories. LDA is a special form of QDA, where each class are assumed to share the same covariance matrix
+
+**Here LDA doesn't seem to be a good model as below plots shows that data points given are not linearly separable.**
+
+```{r ls-plot11}
+training %>%
+  ggplot(aes(x = LoanAmount, y= ApplicantIncome, color = Loan_Status)) + geom_point()
+```
+
+
+```{r ls-plot12}
+training %>%
+  ggplot(aes(x = LoanAmount, y= CoapplicantIncome, color = Loan_Status)) + geom_point()
+```
+
+```{r ls-plot13}
+training %>%
+  ggplot(aes(x = LoanAmount, y= ApplicantIncome+CoapplicantIncome, color = Loan_Status)) + geom_point()
+```
+
+
+```{r lda-model}
 # LDA model
-lda_model <- lda(Loan_Status~., data = loan_data)
+lda_model <- lda(Loan_Status ~ LoanAmount+ApplicantIncome+CoapplicantIncome, data = loan_data)
 lda_model
 ```
+
 
 ```{r}
 # prediction from lda model
@@ -293,15 +338,16 @@ lda_predict <- lda_model %>%
 ```
 
 
-```{r lda-accuracy}
-# accuracy
-mean(lda_predict$class==testing$Loan_Status)
-confusionMatrix(lda_predict$class, testing$Loan_Status)
-```
 
-LDA model accuracy comes out as ~81%
 
 ## K-nearest neighbor (KNN)
+
+A K-nearest neighbor, or KNN algorithm, is a method of classifying data that relies on similar points being close together to identify groups. It uses the distance between data points to assign the nearest points to groups based on the value of K. This is why it is important to preprocess the data. 
+
+In this case we scaled and centered the data to reduce bias and improve our model’s predictive capability (especially in our model’s accuracy) as we have done below. Sometimes these groups are called batches. In general, smaller values for K indicate fewer batches and larger distances between similar points while larger values for K, have smaller distances between similar points. This K-value can be optimized.
+
+To determine our optimal K-value we used a function from the caret package that iterates through a number of K-neighbors consecutively until it experimentally finds the one that produces the most accurate predictions. This function stops once it recognizes overfitting. It then selects the best value for K and creates a model with it. The graph below shows how this process worked and our optimal value K is the maximum point on the line.
+
 
 ```{r knn}
 # KNN model
@@ -320,12 +366,13 @@ knn_model
 
 
 
-```{r}
+```{r plot-knn}
 # prediction from knn model
 plot(knn_model)
 knn_predict <- predict(knn_model,newdata = testing)
 mean(knn_predict == testing$Loan_Status) # accuracy
-confusionMatrix(knn_predict, testing$Loan_Status)
+conf.mat.knn <- confusionMatrix(knn_predict, testing$Loan_Status)
+conf.mat.knn
 ```
 
 KNN model accuracy comes out as ~80%
@@ -333,7 +380,9 @@ KNN model accuracy comes out as ~80%
 
 ## Decision Trees
 
-```{r Decision}
+In a decision tree model the data is split into distinct options of 'yes' or 'no' based on parameters that make the options possible. These splits are called nodes and the decisions made at them can be mapped. For example, we provide a small decision tree that shows how decisions can be made based on credit history, coapplicant income, and property area.
+
+```{r dt-model}
 # Decision Trees model
 set.seed(622)
 tree.loans = tree(Loan_Status~., data=training)
@@ -342,51 +391,88 @@ plot(tree.loans)
 text(tree.loans, pretty = 0)
 ```
 
-```{r}
-# prediction from decision tree model
-tree.predict<-predict(tree.loans, testing, type = 'class')
-mean(tree.predict == testing$Loan_Status) # accuracy
-confusionMatrix(tree.predict, testing$Loan_Status)
+We also review which variables are most important for making decisions in our model.These are shown in the plot as a straight line extending from the axis to the length of its importance to the model. Accuracy was also used to select the optimal model using the largest value where our final tree depth  used for this model is 1. 
+
+
+```{r Decision}
+# Decision Trees model
+set.seed(622)
+control <- trainControl(method="repeatedcv", number=10, repeats=3, search='grid')
+metric <- "Accuracy"
+tunegrid <- expand.grid(.maxdepth=c(1:15))
+tree.loans <- train(Loan_Status~., data = training, method="rpart2", tuneGrid=tunegrid, trControl=control)
+print(tree.loans)
+plot(tree.loans)
+
+treeImp <- varImp(tree.loans, scale = FALSE)
+plot(treeImp, top = 10)
 ```
 
-Decision Tree model accuracy comes out as ~80%
+```{r dt-pred}
+# prediction from decision tree model
+tree.predict <- predict(tree.loans, testing,type='raw')
+mean(tree.predict == testing$Loan_Status) # accuracy
+conf.mat.decisiontree <- confusionMatrix(tree.predict, testing$Loan_Status)
+conf.mat.decisiontree
+```
+
+Our decision Tree model accuracy comes out as ~81%. As shown in the confusion matrix, there is room for improvement in this model's sensitivity among other variables. We try to improve this with the random forest model. 
 
 ## Random Forests
+
+A random forest model works by building a number of decision trees and selecting the most accurate decisions from the trees. These decisions are randomized and in our case, tries 3 variables at each node or split in the tree. We set our number of trees to 500 and train the model to predict loan status. We review the variables of most importance in the model and in this case, give the model a boost to improve accuracy. 
 
 ```{r rf}
 set.seed(622)
 # Random Forest model
-rf.loans <- randomForest(Loan_Status~., data = training)
-rf.loans
+control <- trainControl(method="repeatedcv", number=10, repeats=3, search="grid")
+metric <- "Accuracy"
+tunegrid <- expand.grid(.mtry=c(1:15))
+rf.loans <- train(Loan_Status~., data = training, method="rf",tuneGrid=tunegrid, trControl=control)
+print(rf.loans)
+plot(rf.loans)
 
+rfImp <- varImp(rf.loans, scale = FALSE)
+plot(rfImp, top = 10)
 ```
 
-```{r}
+```{r rf-pred}
 # prediction from random forest model
-rf.predict <- predict(rf.loans, testing,type='class')
+rf.predict <- predict(rf.loans, testing,type='raw')
 mean(rf.predict == testing$Loan_Status) # accuracy
-confusionMatrix(rf.predict, testing$Loan_Status)
+conf.mat.randomforest <- confusionMatrix(rf.predict, testing$Loan_Status)
+conf.mat.randomforest
 ```
 
-Random Forest model accuracy comes out as ~80%
+Our random Forest model accuracy comes out as ~82%. This is an improvement upon our decision model and the sensitivity did increase as we desired. 
 
 # Model Performance
 
-All 4 of the models we built above have an accuracy rate of around 80% with the LDA model getting the light edge in accuracy (81.1% to 79.5% for the other 3). 
+All 4 of the models we built above have an accuracy rate of around 80% with the fine tuned random forest model getting the light edge in accuracy with 82%, compared to roughly 80% accuracy for each of the LDA, KNN, and Decision Tree models. A table of the results with our selection criteria is shown for reference. Note, we remove LDA because it failed to be linearly seperable.
 
-Next we will look at some more detailed accuracy metrics produced from the predict function. 
+```{r model-per}
+results <- data.frame(matrix(names(conf.mat.knn$overall)))
+results$knn <- round(conf.mat.knn$overall, 4)
+results$decisiontree <- round(conf.mat.decisiontree$overall, 4)
+results$randomforest <- round(conf.mat.randomforest$overall, 4)
+results %>%
+  rename(statistic = matrix.names.conf.mat.knn.overall..) %>% 
+  kable()
+```
 
-In this particular case, since the accuracy results are so similar it is wise to examine which models are most often leading to type 1 or type 2 errors. Assuming a null hypothesis is not giving a loan a type 1 error is giving someone a loan when they should not have gotten one and a type 2 error is not giving someone a loan when they should have gotten one. This correlates to the sensitivity and specificity respectively. The balanced accuracy metric takes the mean of sensitivity and specificity in order to diagnose if a model appears to be accurate but is really only predicting the positive or negative case correctly. In this case the random forest model has a slight edge over the LDA in balanced accuracy (0.7212 to 0.7201).
+In this particular case, since the accuracy results are so similar it is also wise to examine which models are most often leading to type 1 or type 2 errors. Assuming a null hypothesis is not giving a loan a type 1 error is giving someone a loan when they should not have gotten one and a type 2 error is not giving someone a loan when they should have gotten one. This correlates to the sensitivity and specificity respectively. The balanced accuracy metric takes the mean of sensitivity and specificity in order to diagnose if a model appears to be accurate but is really only predicting the positive or negative case correctly. In this case the random forest model has a slight edge over the LDA in balanced accuracy (0.7212 to 0.7201).
 
-Although the LDA has the smallest p-value it is still <0.0025 for all models so they can all be used so this does not help us decide which model to choose. The same can be said for the Mcnemar's p-value.
+Although the Random Forest has the smallest p-value it is still less than 0.0025 for all models so they can all be used. Unfortunately, this does not help us decide which model to choose. They are all signifcant results. The same can be said for the Mcnemar's p-value.
 
-The LDA also has the best Kappa score of 0.5046. The Kappa score can be a much more accurate indicator of accuracy then the standard accuracy rate. The kappa score takes into account the expected accuracy of a model given the instances of each class. This helps a lot with unbalanced class numbers in the dataset. It is encouraging to see the LDA Kappa is also the highest which corresponds with it having the highest accuracy. Although the accuracy score is high a Kappa score around 0.5046 only indicates a moderately good model.
+The Random Forest also has the best Kappa score of 0.5046. The Kappa score can be a much more accurate indicator of accuracy then the standard accuracy rate. The kappa score takes into account the expected accuracy of a model given the instances of each class. This helps a lot with unbalanced class numbers in the dataset. It is encouraging to see the Random Forest Kappa is also the highest which corresponds with it having the highest accuracy. Although the accuracy score is high a Kappa score around 0.5046 only indicates a moderately good model.
 
-Given the LDa has the highest accuracy, kappa, and nearly the highest balanced accuracy, the LDA is the model that we would use going forward.
+Given the Random Forest model has the highest accuracy, kappa, and best balanced accuracy statistics, the Random Forest model is the mode we would use going forward.
 
 # Conclusion
 
-After reviewing the results of 4 different models (LDA, KNN, Decision Tree, and Random Forest), we found that LDA is the most accurate by numerous metrics and should be considered the best model for this data. However, the metrics for these 4 models was very close and it did not leave us with no choice but to pick the LDA. If presenting this to stakeholders we would recommend the LDA model with the caveat they further testing and verification may be needed to ensure the LDA is the most accurate model of other iterations of the split of training and testing data.
+After reviewing the results of 4 different models (LDA, KNN, Decision Tree, and Random Forest), we found that the Random Forest model is the most accurate by numerous metrics and should be considered the best model for this data. However, the metrics for these 4 models were very close when measuring accuracy overall. LDA's performance was similar to our other 3 selected models. If LDA had not failed the linear separability test,it would have been our second best choice. 
+
+When presenting this to stakeholders we would recommend the Random Forest model with the caveat that further testing and verification may be needed to ensure this is the most accurate model. For this report, we largely avoided distorting the data which meant minimizing feature manipulation. Further testing could include more feature manipulation to fine tune the model for a specific performance statistic, especially those statistics that do not focus on accuracy. It may also be beneficial to complete other iterations of the split of training and testing data with differing proportions.  
 
 # References
 
